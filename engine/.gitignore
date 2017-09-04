@@ -1,0 +1,4 @@
+# Ignore test builds
+diorama
+# Ignore compiled object files
+*.o
