@@ -325,7 +325,7 @@ namespace Draw
 		return c1;
 	}
 	/* Blend pixel */
-	int blend(int x,int y,int c,int m,int s)
+	int blend(int x,int y,int c,int mode,int s)
 	{
 		unsigned char *cb;
 		unsigned char *sb;
@@ -339,7 +339,7 @@ namespace Draw
 		return s;
 	}
 	/* Draws a slice of triangle */
-	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
+	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data,int mode)
 	{
 		int x,color,sample;
 		float af,bf,cf;
@@ -348,6 +348,7 @@ namespace Draw
 		float u1,v1,u2,v2,u3,v3;
 		float dred,dgreen,dblue,dextra;
 		float red,green,blue,extra;
+		float du,dv,uu,vv;
 		int u,v,s;
 		Fragment f1,f2,f3;
 		unsigned char *colorb;
@@ -366,22 +367,26 @@ namespace Draw
 		af = a1;
 		bf = b1;
 		cf = c1;
-		/* Color pointer */
-		colorb = (unsigned char*)&color;
-		/* Initial color */
-		red = (f1.red*a1+f2.red*b1+f3.red*c1);
-		green = (f1.green*a1+f2.green*b1+f3.green*c1);
-		blue = (f1.blue*a1+f2.blue*b1+f3.blue*c1);
-		extra = (f1.extra*a1+f2.extra*b1+f3.extra*c1);
-		/* Gourad coordinates */
-		dred = (f1.red*a2+f2.red*b2+f3.red*c2)-red;
-		dgreen = (f1.green*a2+f2.green*b2+f3.green*c2)-green;
-		dblue = (f1.blue*a2+f2.blue*b2+f3.blue*c2)-blue;
-		dextra = (f1.extra*a2+f2.extra*b2+f3.extra*c2)-extra;
-		dred /= run;
-		dgreen /= run;
-		dblue /= run;
-		dextra /= run;
+		/* Use color interpolation or not */
+		if(mode&DRAW_GOURAD)
+		{
+			/* Color pointer */
+			colorb = (unsigned char*)&color;
+			/* Initial color */
+			red = (f1.red*a1+f2.red*b1+f3.red*c1);
+			green = (f1.green*a1+f2.green*b1+f3.green*c1);
+			blue = (f1.blue*a1+f2.blue*b1+f3.blue*c1);
+			extra = (f1.extra*a1+f2.extra*b1+f3.extra*c1);
+			/* Gourad coordinates */
+			dred = (f1.red*a2+f2.red*b2+f3.red*c2)-red;
+			dgreen = (f1.green*a2+f2.green*b2+f3.green*c2)-green;
+			dblue = (f1.blue*a2+f2.blue*b2+f3.blue*c2)-blue;
+			dextra = (f1.extra*a2+f2.extra*b2+f3.extra*c2)-extra;
+			dred /= run;
+			dgreen /= run;
+			dblue /= run;
+			dextra /= run;
+		}
 		/* Texture coordinates */
 		u1 = (float)a->u;
 		u2 = (float)b->u;
@@ -389,26 +394,61 @@ namespace Draw
 		v1 = (float)a->v;
 		v2 = (float)b->v;
 		v3 = (float)c->v;
+		uu = (u1*a1+u2*b1+u3*c1);
+		vv = (v1*a1+v2*b1+v3*c1);
+		du = (u1*a2+u2*b2+u3*c2)-uu;
+		dv = (v1*a2+v2*b2+v3*c2)-vv;
+		du /= run;
+		dv /= run;
 		/* Draw slice */
 		for(x = from;x < to;x++)
 		{
-			/* Find multiply source color */
-			f1.red = red;
-			f1.green = green;
-			f1.blue = blue;
-			f1.extra = extra;
-			colorb[0] = (unsigned char)(f1.red*255.0f);
-			colorb[1] = (unsigned char)(f1.green*255.0f);
-			colorb[2] = (unsigned char)(f1.blue*255.0f);
-			colorb[3] = (unsigned char)(f1.extra*255.0f);
-			u = (int)(u1*af+u2*bf+u3*cf);
-			v = (int)(v1*af+v2*bf+v3*cf);
-			sample = tex->get_pixel(u,v);
-			color = multiply_color(color,sample);
-			/* Take pixel, blend it and put it back */
-			s = data[0];
-			data[0] = blend(x,y,color,1,s);
+			/* Find multiply source color (only if doing gourad) */
+			if(mode&DRAW_GOURAD)
+			{
+				/* Find interpolated color */
+				f1.red = red;
+				f1.green = green;
+				f1.blue = blue;
+				f1.extra = extra;
+				colorb[0] = (unsigned char)(f1.red*255.0f);
+				colorb[1] = (unsigned char)(f1.green*255.0f);
+				colorb[2] = (unsigned char)(f1.blue*255.0f);
+				colorb[3] = (unsigned char)(f1.extra*255.0f);
+			}
+			else
+			{
+				/* Flat shaded it is */
+				color = a->color;
+			}
+			if(mode&DRAW_TEXTURE)
+			{
+				/* Find texture coordinate and sample */
+				u = (int)(uu);
+				v = (int)(vv);
+				sample = tex->get_pixel(u,v);
+				/* Find final color and blend to framebuffer */
+				if(mode&DRAW_BLEND)
+				{
+					/* Alpha blend */
+					color = multiply_color(color,sample);
+					s = data[0];
+					data[0] = blend(x,y,color,mode,s);
+				}
+				else
+				{
+					/* Direct */
+					data[0] = multiply_color(color,sample);
+				}
+			}
+			else
+			{
+				/* No sampling needed */
+				data[0] = color;
+			}
 			/* Advance */
+			uu += du;
+			vv += dv;
 			af += d1;
 			bf += d2;
 			cf += d3;
@@ -421,7 +461,7 @@ namespace Draw
 		}
 	}
 	/* Draw a 2D textured triangle */
-	void triangle(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *t)
+	void triangle(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *t,int mode)
 	{
 		Vertex2D *top;
 		Vertex2D *bottom;
@@ -486,7 +526,7 @@ namespace Draw
 				barycentric(top,bottom,side,xf,y+top->y,&a1,&b1,&c1);
 				barycentric(top,bottom,side,xt,y+top->y,&a2,&b2,&c2);
 				data = Video::get_data(xf,y+top->y);
-				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xf,xt,y+top->y,data);
+				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xf,xt,y+top->y,data,mode);
 				/* Adjust */
 				x3 += d3;
 				x12 += d1;
@@ -521,7 +561,7 @@ namespace Draw
 				barycentric(top,bottom,side,xf,y+top->y,&a1,&b1,&c1);
 				barycentric(top,bottom,side,xt,y+top->y,&a2,&b2,&c2);
 				data = Video::get_data(xf,y+top->y);
-				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xf,xt,y+top->y,data);
+				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xf,xt,y+top->y,data,mode);
 				/* Adjust */
 				x3 += d3;
 				x12 += d2;

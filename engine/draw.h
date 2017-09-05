@@ -16,6 +16,11 @@
 /* Half translucent */
 #define DRAW_TRANSLUCENT 0x80FFFFFF
 
+/* Render modes */
+#define DRAW_GOURAD 1
+#define DRAW_BLEND 2
+#define DRAW_TEXTURE 4
+
 /* Texture */
 class Texture
 {
@@ -153,14 +158,17 @@ namespace Draw
 		a2,b2,c2 - second barycentric coordinate (right)
 		from,to - x coordinates of left and right end of slice
 		y - y coordinate of slice
+		data - pointer to run of pixel data
+		mode - render mode
 	*/
-	extern void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data);
+	extern void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data,int mode);
 	/*
 		Given three vertices and a texture, draws a 2D textured triangle
 		a,b,c - the points of the triangle
 		t - the texture to use
+		mode - render mode
 	*/
-	extern void triangle(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *t);
+	extern void triangle(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *t,int mode);
 	/*
 		Gets the current pixel fill count
 	*/

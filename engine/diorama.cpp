@@ -39,7 +39,7 @@ int main(int argn,char **argv)
 			a.color = DRAW_CYAN;
 			b.color = DRAW_YELLOW;
 			c.color = DRAW_MAGENTA;
-			Draw::triangle(&a,&b,&c,t);
+			Draw::triangle(&a,&b,&c,t,0);
 		}
 		if(Video::end())
 			return -1;
@@ -64,7 +64,10 @@ int main(int argn,char **argv)
 	pps /= sec;
 	printf("Triangles/sec.: %0.1f\n",tps);
 	printf("Fill rate: %0.1f\n",pps);
-	/* 150 -> 170 -> 426 */
+	/* 150 -> 170 -> 436 */
+	/* 469 (no gourad) */
+	/* 543 (no blend) */
+	/* 593 (no texture) */
 	/* Goal: 120,000/sec. */
 	/* Stop video */
 	Video::stop();
