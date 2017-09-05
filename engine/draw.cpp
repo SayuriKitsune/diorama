@@ -240,18 +240,25 @@ namespace Draw
 	/* Interpolate three colors */
 	int interpolate_color(int c1,int c2,int c3,float af,float bf,float cf)
 	{
-		Fragment f1,f2,f3,fc;
-		/* Convert to fragments */
-		pixel_to_fragment(c1,&f1);
-		pixel_to_fragment(c2,&f2);
-		pixel_to_fragment(c3,&f3);
-		/* Interpolate to find center fragment */
-		fc.red = f1.red*af+f2.red*bf+f3.red*cf;
-		fc.green = f1.green*af+f2.green*bf+f3.green*cf;
-		fc.blue = f1.blue*af+f2.blue*bf+f3.blue*cf;
-		fc.extra = f1.extra*af+f2.extra*bf+f3.extra*cf;
-		/* Return new pixel */
-		return fragment_to_pixel(&fc);
+		unsigned char *c1b;
+		unsigned char *c2b;
+		unsigned char *c3b;
+		unsigned char ab,bb,cb;
+		/* Convert alpha to bytes */
+		ab = (unsigned char)(af*255.0f);
+		bb = (unsigned char)(bf*255.0f);
+		cb = (unsigned char)(cf*255.0f);
+		/* Map to bytes */
+		c1b = (unsigned char*)&c1;
+		c2b = (unsigned char*)&c2;
+		c3b = (unsigned char*)&c3;
+		/* Perform */
+		c1b[0] = blend_multiply[c1b[0]][ab]+blend_multiply[c2b[0]][bb]+blend_multiply[c3b[0]][cb];
+		c1b[1] = blend_multiply[c1b[1]][ab]+blend_multiply[c2b[1]][bb]+blend_multiply[c3b[1]][cb];
+		c1b[2] = blend_multiply[c1b[2]][ab]+blend_multiply[c2b[2]][bb]+blend_multiply[c3b[2]][cb];
+		c1b[3] = blend_multiply[c1b[3]][ab]+blend_multiply[c2b[3]][bb]+blend_multiply[c3b[3]][cb];
+		/* Result is in c1 */
+		return c1;
 	}
 	/* Interpolate these values */
 	int interpolate(int x1,int x2,int x3,float af,float bf,float cf)
@@ -266,17 +273,18 @@ namespace Draw
 	/* Multiplies two colors */
 	int multiply_color(int c1,int c2)
 	{
-		Fragment f1,f2,f;
-		/* Convert */
-		pixel_to_fragment(c1,&f1);
-		pixel_to_fragment(c2,&f2);
-		/* Multiply */
-		f.red = f1.red*f2.red;
-		f.green = f1.green*f2.green;
-		f.blue = f1.blue*f2.blue;
-		f.extra = f1.extra*f2.extra;
-		/* Done */
-		return fragment_to_pixel(&f);
+		unsigned char *c1b;
+		unsigned char *c2b;
+		/* Map to bytes */
+		c1b = (unsigned char*)&c1;
+		c2b = (unsigned char*)&c2;
+		/* Apply LUT */
+		c1b[0] = blend_multiply[c1b[0]][c2b[0]];
+		c1b[1] = blend_multiply[c1b[1]][c2b[1]];
+		c1b[2] = blend_multiply[c1b[2]][c2b[2]];
+		c1b[3] = blend_multiply[c1b[3]][c2b[3]];
+		/* c1 is modified with the result */
+		return c1;
 	}
 	/* Blend pixel */
 	void blend(int x,int y,int c,int m)
