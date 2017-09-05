@@ -66,6 +66,11 @@ namespace Video
 	*/
 	extern int get_pixel(int x,int y);
 	/*
+		Gets a direct pointer to framebuffer data starting at a location for sequential access
+		x,y - location to start from
+	*/
+	extern int *get_data(int x,int y);
+	/*
 		Gets the internal resolution of video
 	*/
 	extern int get_width();

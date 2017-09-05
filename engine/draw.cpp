@@ -8,13 +8,50 @@
 #include "video.h"
 #include "draw.h"
 
+/* Get mask */
+int Texture :: get_mask(int s)
+{
+	switch(s)
+	{
+	case 8:
+		return 3;
+	case 16:
+		return 4;
+	case 32:
+		return 5;
+	case 64:
+		return 6;
+	case 128:
+		return 7;
+	case 256:
+		return 8;
+	}
+	return -1;
+}
+
 /* New texture */
 Texture :: Texture(int w,int h)
 {
-	width = w;
-	height = h;
-	data = new int[width*height];
-	memset(data,0,sizeof(int)*width*height);
+	/* Check for valid size */
+	width_mask = get_mask(w);
+	height_mask = get_mask(h);
+	if(width_mask < 0 || height_mask < 0)
+	{
+		/* Invalid texture */
+		width = 32;
+		height = 32;
+		width_mask = 5;
+		height_mask = 5;
+		make_test_pattern();
+	}
+	else
+	{
+		/* Valid allocation */
+		width = w;
+		height = h;
+		data = new int[width*height];
+		memset(data,0,sizeof(int)*width*height);
+	}
 }
 
 /* Delete texture */
@@ -42,9 +79,9 @@ int Texture :: get_pixel(int x,int y)
 	unsigned int ux,uy;
 	ux = (unsigned int)x;
 	uy = (unsigned int)y;
-	ux = ux%width;
-	uy = uy%height;
-	return data[ux+uy*width];
+	ux = (ux&width_mask);
+	uy = (uy&height_mask);
+	return data[ux+(uy<<width_mask)];
 }
 
 /* Set pixel */
@@ -70,14 +107,15 @@ void Texture :: make_test_pattern()
 			/* Checkerboard pixel pattern */
 			s = ((x+y)%2);
 			if(s)
-				c = DRAW_RED;
+				c = DRAW_GRAY;
 			else
-				c = DRAW_BLUE;
+				c = DRAW_WHITE;
 			/* Borders become cyan/yellow pattern */
-			if(x == 0 || x == (width-1))
-				c = (c|DRAW_GREEN);
-			if(y == 0 || y == (height-1))
-				c = (c|DRAW_GREEN);
+			if(x == 0 || y == 0)
+			{
+				if(s)
+					c = DRAW_DARK;
+			}
 			/* Set */
 			set_pixel(x,y,c);
 		}
@@ -287,30 +325,28 @@ namespace Draw
 		return c1;
 	}
 	/* Blend pixel */
-	void blend(int x,int y,int c,int m)
+	int blend(int x,int y,int c,int m,int s)
 	{
 		unsigned char *cb;
 		unsigned char *sb;
-		int s;
-		/* Get source pixel */
-		s = Video::get_pixel(x,y);
 		/* Map to bytes */
 		cb = (unsigned char*)&c;
 		sb = (unsigned char*)&s;
 		sb[0] = blend_multiply[cb[0]][cb[3]]+blend_multiply_inv[sb[0]][cb[3]];
 		sb[1] = blend_multiply[cb[1]][cb[3]]+blend_multiply_inv[sb[1]][cb[3]];
 		sb[2] = blend_multiply[cb[2]][cb[3]]+blend_multiply_inv[sb[2]][cb[3]];
-		/* s has been modified and can now be just put back in */
-		Video::set_pixel(x,y,s);
+		/* s has been modified with the result */
+		return s;
 	}
 	/* Draws a slice of triangle */
-	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y)
+	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
 	{
 		int x,color,sample;
 		float af,bf,cf;
 		float d1,d2,d3;
 		float run;
-		int u,v;
+		float u1,v1,u2,v2,u3,v3;
+		int u,v,s;
 		/* Find the run length of the slice */
 		run = (float)(to-from);
 		d1 = a2-a1;
@@ -322,18 +358,30 @@ namespace Draw
 		af = a1;
 		bf = b1;
 		cf = c1;
+		/* Texture coordinates */
+		u1 = (float)a->u;
+		u2 = (float)b->u;
+		u3 = (float)c->u;
+		v1 = (float)a->v;
+		v2 = (float)b->v;
+		v3 = (float)c->v;
 		/* Draw slice */
 		for(x = from;x < to;x++)
 		{
+			/* Find multiply source color */
 			color = interpolate_color(a->color,b->color,c->color,af,bf,cf);
-			u = interpolate(a->u,b->u,c->u,af,bf,cf);
-			v = interpolate(a->v,b->v,c->v,af,bf,cf);
+			u = (int)(u1*af+u2*bf+u3*cf);
+			v = (int)(v1*af+v2*bf+v3*cf);
 			sample = tex->get_pixel(u,v);
 			color = multiply_color(color,sample);
-			blend(x,y,color,1);
+			/* Take pixel, blend it and put it back */
+			s = data[0];
+			data[0] = blend(x,y,color,1,s);
+			/* Advance */
 			af += d1;
 			bf += d2;
 			cf += d3;
+			data++;
 			pixels_filled++;
 		}
 	}
@@ -347,7 +395,8 @@ namespace Draw
 		int dx1,dx2,dx3;
 		float d1,d2,d3;
 		float x12,x3;
-		int from,to,y;
+		int from,to,xf,xt,y;
+		int *data;
 		float a1,b1,c1,a2,b2,c2;
 		/* Find top and bottom */
 		top = find_top(a,b,c);
@@ -377,35 +426,71 @@ namespace Draw
 		x3 = (float)top->x;
 		for(y = 0;y < dy1;y++)
 		{
-			/* Draw dot */
-			from = (int)x3;
-			to = (int)x12;
-			barycentric(top,bottom,side,from,y+top->y,&a1,&b1,&c1);
-			barycentric(top,bottom,side,to,y+top->y,&a2,&b2,&c2);
-			if(from < to)
-				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,from,to,y+top->y);
-			else
-				slice(top,bottom,side,t,a2,b2,c2,a1,b1,c1,to,from,y+top->y);
-			/* Adjust */
-			x3 += d3;
-			x12 += d1;
+			/* Perform a range check */
+			if((y+top->y) >= 0 || (y+top->y) < Video::get_height())
+			{
+				/* Find range */
+				from = (int)x3;
+				to = (int)x12;
+				if(from < to)
+				{
+					xf = from;
+					xt = to;
+				}
+				else
+				{
+					xf = to;
+					xt = from;
+				}
+				/* Limit range */
+				if(from < 0)
+					from = 0;
+				if(to >= Video::get_width())
+					to = Video::get_width();
+				/* Find interpolants */
+				barycentric(top,bottom,side,xf,y+top->y,&a1,&b1,&c1);
+				barycentric(top,bottom,side,xt,y+top->y,&a2,&b2,&c2);
+				data = Video::get_data(xf,y+top->y);
+				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xf,xt,y+top->y,data);
+				/* Adjust */
+				x3 += d3;
+				x12 += d1;
+			}
 		}
 		/* Draw bottom slice of triangle */
 		x12 = (float)side->x;
 		for(y = dy1;y < dy3;y++)
 		{
-			/* Draw dot */
-			from = (int)x3;
-			to = (int)x12;
-			barycentric(top,bottom,side,from,y+top->y,&a1,&b1,&c1);
-			barycentric(top,bottom,side,to,y+top->y,&a2,&b2,&c2);
-			if(from < to)
-				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,from,to,y+top->y);
-			else
-				slice(top,bottom,side,t,a2,b2,c2,a1,b1,c1,to,from,y+top->y);
-			/* Adjust */
-			x3 += d3;
-			x12 += d2;
+			/* Perform a range check */
+			if((y+top->y) >= 0 || (y+top->y) < Video::get_height())
+			{
+				/* Find range */
+				from = (int)x3;
+				to = (int)x12;
+				if(from < to)
+				{
+					xf = from;
+					xt = to;
+				}
+				else
+				{
+					xf = to;
+					xt = from;
+				}
+				/* Limit range */
+				if(from < 0)
+					from = 0;
+				if(to >= Video::get_width())
+					to = Video::get_width();
+				/* Find interpolants */
+				barycentric(top,bottom,side,xf,y+top->y,&a1,&b1,&c1);
+				barycentric(top,bottom,side,xt,y+top->y,&a2,&b2,&c2);
+				data = Video::get_data(xf,y+top->y);
+				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xf,xt,y+top->y,data);
+				/* Adjust */
+				x3 += d3;
+				x12 += d2;
+			}
 		}
 	}
 	/* Get current fill count */

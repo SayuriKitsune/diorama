@@ -3,6 +3,8 @@
 
 /* Basic colors */
 #define DRAW_WHITE   0xFFFFFFFF
+#define DRAW_GRAY    0xFF808080
+#define DRAW_DARK    0xFF404040
 #define DRAW_BLACK   0xFF000000
 #define DRAW_RED     0xFF0000FF
 #define DRAW_GREEN   0xFF00FF00
@@ -20,10 +22,18 @@ class Texture
 private:
 	int width; /* Width of texture */
 	int height; /* Height of texture */
+	int width_mask; /* Width wrap mask */
+	int height_mask; /* Height wrap mask */
 	int *data; /* Image pixel data */
+	/*
+		Gets mask value for size, or -1 if invalid
+		s - the size
+	*/
+	int get_mask(int s);
 public:
 	/*
 		Allocates a new blank texture
+		Sizes must be in powers of two
 		w,h - size of texture (in pixels)
 	*/
 	Texture(int w,int h);
@@ -144,7 +154,7 @@ namespace Draw
 		from,to - x coordinates of left and right end of slice
 		y - y coordinate of slice
 	*/
-	extern void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y);
+	extern void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data);
 	/*
 		Given three vertices and a texture, draws a 2D textured triangle
 		a,b,c - the points of the triangle

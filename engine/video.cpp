@@ -158,4 +158,9 @@ namespace Video
 	{
 		return internal_height;
 	}
+	/* Gets the beginning of a run of framebuffer data */
+	int *get_data(int x,int y)
+	{
+		return &surface_pixels[x+y*surface_pitch];
+	}
 }
