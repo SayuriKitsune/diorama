@@ -49,6 +49,25 @@ public:
 	void make_test_pattern();
 };
 
+/* 2D Vertex */
+typedef struct
+{
+	int x; /* Location of vertex on screen */
+	int y;
+	int u; /* Texture coordinate */
+	int v;
+	int color; /* Vertex color */
+}Vertex2D;
+
+/* Color fragment */
+typedef struct
+{
+	float red; /* Channels */
+	float green;
+	float blue;
+	float extra;
+}Fragment;
+
 /* Draw */
 namespace Draw
 {
@@ -59,6 +78,76 @@ namespace Draw
 		t - texture to draw
 	*/
 	extern void texture(int x,int y,Texture *t);
+	/*
+		Given three vertices, returns the top one
+		a,b,c - the three vertices
+	*/
+	extern Vertex2D *find_top(Vertex2D *a,Vertex2D *b,Vertex2D *c);
+	/*
+		Given three vertices, returns the bottom one
+		a,b,c - the three vertices
+	*/
+	extern Vertex2D *find_bottom(Vertex2D *a,Vertex2D *b,Vertex2D *c);
+	/*
+		Sets the given vertex to a random state
+		A texture is required as it sets a random texture coordinate too
+		The texture is not modified
+		v - the vertex
+		t - reference texture
+	*/
+	extern void make_random_vertex(Vertex2D *v,Texture *t);
+	/*
+		Calculate the barycentric coordinates between three points
+		a,b,c - the three 2D vertices
+		x,y - coordinate to convert
+		af,bf,cf - barycentric coordinates relative to given vertices
+	*/
+	extern void barycentric(Vertex2D *a,Vertex2D *b,Vertex2D *c,int x,int y,float *af,float *bf,float *cf);
+	/*
+		Converts a pixel to fragment
+		c - the pixel
+		f - output fragment
+	*/
+	extern void pixel_to_fragment(int c,Fragment *f);
+	/*
+		Converts from fragment back to pixel and returns it
+		f - the fragment
+	*/
+	extern int fragment_to_pixel(Fragment *f);
+	/*
+		Interpolate between three colors using three factors
+		These three factors are often barycentric coordinates
+		c1,c2,c3 - the three colors
+		af,bf,cf - the three factors
+	*/
+	extern int interpolate_color(int c1,int c2,int c3,float af,float bf,float cf);
+	/*
+		Multiplies two colors together and returns result
+		c1,c2 - the two colors
+	*/
+	extern int multiply_color(int c1,int c2);
+	/*
+		Interpolate between three values using three factors
+		x1,x2,x3 - the three values
+		af,bf,cf - the three factors
+	*/
+	extern int interpolate(int x1,int x2,int x3,float af,float bf,float cf);
+	/*
+		Draws a single slice of a textured 2D triangle
+		a,b,c - the three points
+		tex - texture
+		a1,b1,c1 - first barycentric coordinate (left)
+		a2,b2,c2 - second barycentric coordinate (right)
+		from,to - x coordinates of left and right end of slice
+		y - y coordinate of slice
+	*/
+	extern void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y);
+	/*
+		Given three vertices and a texture, draws a 2D textured triangle
+		a,b,c - the points of the triangle
+		t - the texture to use
+	*/
+	extern void triangle(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *t);
 }
 
 #endif

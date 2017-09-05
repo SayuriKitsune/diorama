@@ -60,6 +60,11 @@ namespace Video
 		c - pixel
 	*/
 	extern void set_pixel(int x,int y,int c);
+	/*
+		Gets the internal resolution of video
+	*/
+	extern int get_width();
+	extern int get_height();
 }
 
 #endif

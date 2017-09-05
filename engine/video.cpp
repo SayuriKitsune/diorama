@@ -133,4 +133,14 @@ namespace Video
 		/* Set at position */
 		surface_pixels[x+y*surface_pitch] = c;
 	}
+	/* Gets internal width */
+	int get_width()
+	{
+		return internal_width;
+	}
+	/* Gets internal height */
+	int get_height()
+	{
+		return internal_height;
+	}
 }
