@@ -346,7 +346,15 @@ namespace Draw
 		float d1,d2,d3;
 		float run;
 		float u1,v1,u2,v2,u3,v3;
+		float dred,dgreen,dblue,dextra;
+		float red,green,blue,extra;
 		int u,v,s;
+		Fragment f1,f2,f3;
+		unsigned char *colorb;
+		/* Convert colors to fragments */
+		pixel_to_fragment(a->color,&f1);
+		pixel_to_fragment(b->color,&f2);
+		pixel_to_fragment(c->color,&f3);
 		/* Find the run length of the slice */
 		run = (float)(to-from);
 		d1 = a2-a1;
@@ -358,6 +366,22 @@ namespace Draw
 		af = a1;
 		bf = b1;
 		cf = c1;
+		/* Color pointer */
+		colorb = (unsigned char*)&color;
+		/* Initial color */
+		red = (f1.red*a1+f2.red*b1+f3.red*c1);
+		green = (f1.green*a1+f2.green*b1+f3.green*c1);
+		blue = (f1.blue*a1+f2.blue*b1+f3.blue*c1);
+		extra = (f1.extra*a1+f2.extra*b1+f3.extra*c1);
+		/* Gourad coordinates */
+		dred = (f1.red*a2+f2.red*b2+f3.red*c2)-red;
+		dgreen = (f1.green*a2+f2.green*b2+f3.green*c2)-green;
+		dblue = (f1.blue*a2+f2.blue*b2+f3.blue*c2)-blue;
+		dextra = (f1.extra*a2+f2.extra*b2+f3.extra*c2)-extra;
+		dred /= run;
+		dgreen /= run;
+		dblue /= run;
+		dextra /= run;
 		/* Texture coordinates */
 		u1 = (float)a->u;
 		u2 = (float)b->u;
@@ -369,7 +393,14 @@ namespace Draw
 		for(x = from;x < to;x++)
 		{
 			/* Find multiply source color */
-			color = interpolate_color(a->color,b->color,c->color,af,bf,cf);
+			f1.red = red;
+			f1.green = green;
+			f1.blue = blue;
+			f1.extra = extra;
+			colorb[0] = (unsigned char)(f1.red*255.0f);
+			colorb[1] = (unsigned char)(f1.green*255.0f);
+			colorb[2] = (unsigned char)(f1.blue*255.0f);
+			colorb[3] = (unsigned char)(f1.extra*255.0f);
 			u = (int)(u1*af+u2*bf+u3*cf);
 			v = (int)(v1*af+v2*bf+v3*cf);
 			sample = tex->get_pixel(u,v);
@@ -381,6 +412,10 @@ namespace Draw
 			af += d1;
 			bf += d2;
 			cf += d3;
+			red += dred;
+			green += dgreen;
+			blue += dblue;
+			extra += dextra;
 			data++;
 			pixels_filled++;
 		}

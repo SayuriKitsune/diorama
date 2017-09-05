@@ -64,7 +64,7 @@ int main(int argn,char **argv)
 	pps /= sec;
 	printf("Triangles/sec.: %0.1f\n",tps);
 	printf("Fill rate: %0.1f\n",pps);
-	/* 150 -> 170 -> 355 */
+	/* 150 -> 170 -> 426 */
 	/* Goal: 120,000/sec. */
 	/* Stop video */
 	Video::stop();
