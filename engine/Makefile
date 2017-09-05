@@ -1,7 +1,7 @@
 # The input source code files and compiled objects for the engine
-CFILES = diorama.cpp video.cpp
-HFILES = video.h
-OFILES = diorama.o video.o
+CFILES = diorama.cpp video.cpp draw.cpp
+HFILES = video.h draw.h
+OFILES = diorama.o video.o draw.o
 
 # Libraries that we use
 INCLUDES = -I"sdl"
