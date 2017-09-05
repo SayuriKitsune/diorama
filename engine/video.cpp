@@ -125,12 +125,12 @@ namespace Video
 	/* Sets a pixel on the framebuffer */
 	void set_pixel(int x,int y,int c)
 	{
-		/* Range check (this ends up being slow) */
+		/* Range check */
 		if(x < 0 || x >= internal_width)
 			return;
 		if(y < 0 || y >= internal_height)
 			return;
-		/* Set at position (also slow to be done for each pixel) */
+		/* Set at position */
 		surface_pixels[x+y*surface_pitch] = c;
 	}
 }

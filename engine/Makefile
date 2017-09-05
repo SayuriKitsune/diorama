@@ -10,4 +10,4 @@ LIBS = -lSDL2
 # Compiling to test engine
 test: $(CFILES) $(HFILES)
 	g++ -Wall -Werror -g -c $(INCLUDES) $(CFILES)
-	g++ $(LIBS) $(OFILES) -o diorama
+	g++ $(OFILES) $(LIBS) -o diorama
