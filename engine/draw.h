@@ -151,6 +151,18 @@ namespace Draw
 		t - the texture to use
 	*/
 	extern void triangle(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *t);
+	/*
+		Gets the current pixel fill count
+	*/
+	extern int get_pixels_filled();
+	/*
+		Resets current pixel fill count
+	*/
+	extern void reset_pixels_filled();
+	/*
+		Populates blending LUT tables
+	*/
+	extern void calculate_multiply();
 }
 
 #endif

@@ -87,6 +87,35 @@ void Texture :: make_test_pattern()
 /* Draw */
 namespace Draw
 {
+	/* Globals */
+	int pixels_filled = 0; /* Number of pixels filled (used to calculate fill rate) */
+	unsigned char blend_multiply[256][256]; /* Multiply operation LUT */
+	unsigned char blend_multiply_inv[256][256]; /* Multiply by one minus alpha LUT */
+	/* Populates multiply blend LUTs */
+	void calculate_multiply()
+	{
+		int x,a;
+		float xf,af,mf,mfi;
+		for(x = 0;x < 256;x++)
+		{
+			for(a = 0;a < 256;a++)
+			{
+				/* Convert to fragment range */
+				xf = (float)x;
+				xf /= 255.0f;
+				af = (float)a;
+				af /= 255.0f;
+				/* Calculate */
+				mf = xf*af;
+				mfi = xf*(1.0f-af);
+				/* Convert back to byte range */
+				mf *= 255.0f;
+				mfi *= 255.0f;
+				blend_multiply[x][a] = (unsigned char)(mf);
+				blend_multiply_inv[x][a] = (unsigned char)(mfi);
+			}
+		}
+	}
 	/* Draw a texture directly */
 	void texture(int x,int y,Texture *t)
 	{
@@ -252,18 +281,18 @@ namespace Draw
 	/* Blend pixel */
 	void blend(int x,int y,int c,int m)
 	{
+		unsigned char *cb;
+		unsigned char *sb;
 		int s;
-		Fragment a,b;
-		/* Get source pixel and convert both */
+		/* Get source pixel */
 		s = Video::get_pixel(x,y);
-		pixel_to_fragment(c,&a);
-		pixel_to_fragment(s,&b);
-		/* Alpha vs. 1-Alpha blend */
-		a.red = a.red*a.extra+b.red*(1.0f-a.extra);
-		a.green = a.green*a.extra+b.green*(1.0f-a.extra);
-		a.blue = a.blue*a.extra+b.blue*(1.0f-a.extra);
-		/* Back to color and set */
-		s = fragment_to_pixel(&a);
+		/* Map to bytes */
+		cb = (unsigned char*)&c;
+		sb = (unsigned char*)&s;
+		sb[0] = blend_multiply[cb[0]][cb[3]]+blend_multiply_inv[sb[0]][cb[3]];
+		sb[1] = blend_multiply[cb[1]][cb[3]]+blend_multiply_inv[sb[1]][cb[3]];
+		sb[2] = blend_multiply[cb[2]][cb[3]]+blend_multiply_inv[sb[2]][cb[3]];
+		/* s has been modified and can now be just put back in */
 		Video::set_pixel(x,y,s);
 	}
 	/* Draws a slice of triangle */
@@ -297,6 +326,7 @@ namespace Draw
 			af += d1;
 			bf += d2;
 			cf += d3;
+			pixels_filled++;
 		}
 	}
 	/* Draw a 2D textured triangle */
@@ -369,5 +399,15 @@ namespace Draw
 			x3 += d3;
 			x12 += d2;
 		}
+	}
+	/* Get current fill count */
+	int get_pixels_filled()
+	{
+		return pixels_filled;
+	}
+	/* Reset fill count */
+	void reset_pixels_filled()
+	{
+		pixels_filled = 0;
 	}
 }
