@@ -61,6 +61,11 @@ namespace Video
 	*/
 	extern void set_pixel(int x,int y,int c);
 	/*
+		Gets a pixel from framebuffer while drawing a frame
+		x,y - pixel coordinate (internal)
+	*/
+	extern int get_pixel(int x,int y);
+	/*
 		Gets the internal resolution of video
 	*/
 	extern int get_width();

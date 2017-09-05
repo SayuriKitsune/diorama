@@ -249,6 +249,23 @@ namespace Draw
 		/* Done */
 		return fragment_to_pixel(&f);
 	}
+	/* Blend pixel */
+	void blend(int x,int y,int c,int m)
+	{
+		int s;
+		Fragment a,b;
+		/* Get source pixel and convert both */
+		s = Video::get_pixel(x,y);
+		pixel_to_fragment(c,&a);
+		pixel_to_fragment(s,&b);
+		/* Alpha vs. 1-Alpha blend */
+		a.red = a.red*a.extra+b.red*(1.0f-a.extra);
+		a.green = a.green*a.extra+b.green*(1.0f-a.extra);
+		a.blue = a.blue*a.extra+b.blue*(1.0f-a.extra);
+		/* Back to color and set */
+		s = fragment_to_pixel(&a);
+		Video::set_pixel(x,y,s);
+	}
 	/* Draws a slice of triangle */
 	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y)
 	{
@@ -276,7 +293,7 @@ namespace Draw
 			v = interpolate(a->v,b->v,c->v,af,bf,cf);
 			sample = tex->get_pixel(u,v);
 			color = multiply_color(color,sample);
-			Video::set_pixel(x,y,color);
+			blend(x,y,color,1);
 			af += d1;
 			bf += d2;
 			cf += d3;

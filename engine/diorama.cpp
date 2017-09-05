@@ -12,6 +12,7 @@
 /* Entry */
 int main(int argn,char **argv)
 {
+	int i;
 	/* Start video */
 	if(Video::start())
 		return -1;
@@ -23,27 +24,31 @@ int main(int argn,char **argv)
 	a.y = 0;
 	a.u = 0;
 	a.v = 0;
-	a.color = DRAW_WHITE;
+	a.color = DRAW_TRANSLUCENT;
 	b.x = 0;
 	b.y = 64;
 	b.u = 32;
 	b.v = 0;
-	b.color = DRAW_WHITE;
+	b.color = DRAW_TRANSLUCENT;
 	c.x = 64;
 	c.y = 64;
 	c.u = 32;
 	c.v = 32;
-	c.color = DRAW_WHITE;
+	c.color = DRAW_TRANSLUCENT;
 	while(Video::handle())
 	{
 		if(Video::begin())
 			return -1;
-		b.x = 0;
-		b.y = 64;
-		Draw::triangle(&a,&b,&c,t);
-		b.x = 64;
-		b.y = 0;
-		Draw::triangle(&a,&b,&c,t);
+		for(i = 0;i < 4;i++)
+		{
+			Draw::make_random_vertex(&a,t);
+			Draw::make_random_vertex(&b,t);
+			Draw::make_random_vertex(&c,t);
+			a.color = DRAW_TRANSLUCENT;
+			b.color = DRAW_TRANSLUCENT;
+			c.color = DRAW_TRANSLUCENT;
+			Draw::triangle(&a,&b,&c,t);
+		}
 		if(Video::end())
 			return -1;
 		/* fgetc(stdin); */

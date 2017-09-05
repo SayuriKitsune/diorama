@@ -133,6 +133,17 @@ namespace Video
 		/* Set at position */
 		surface_pixels[x+y*surface_pitch] = c;
 	}
+	/* Gets a pixel on the framebuffer */
+	int get_pixel(int x,int y)
+	{
+		/* Range check */
+		if(x < 0 || x >= internal_width)
+			return 0;
+		if(y < 0 || y >= internal_height)
+			return 0;
+		/* Get */
+		return surface_pixels[x+y*surface_pitch];
+	}
 	/* Gets internal width */
 	int get_width()
 	{

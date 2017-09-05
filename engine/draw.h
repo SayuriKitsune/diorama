@@ -11,6 +11,9 @@
 #define DRAW_CYAN    0xFFFFFF00
 #define DRAW_MAGENTA 0xFFFF00FF
 
+/* Half translucent */
+#define DRAW_TRANSLUCENT 0x80FFFFFF
+
 /* Texture */
 class Texture
 {
