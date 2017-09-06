@@ -40,7 +40,7 @@ int main(int argn,char **argv)
 			a.color = DRAW_CYAN;
 			b.color = DRAW_YELLOW;
 			c.color = DRAW_MAGENTA;
-			Draw::triangle(&a,&b,&c,t,DRAW_TEXTURE|DRAW_BLEND|DRAW_GOURAD);
+			Draw::triangle(&a,&b,&c,t,DRAW_TEXTURE|DRAW_GOURAD|DRAW_BLEND);
 			n++;
 			dts = System::get_tick()-ts;
 			if(dts >= 5000)
@@ -70,7 +70,7 @@ int main(int argn,char **argv)
 	pps /= sec;
 	printf("Triangles/sec.: %0.1f\n",tps);
 	printf("Fill rate: %0.1f\n",pps);
-	/* 848 */
+	/* 2911 */
 	/* Goal: 120,000/sec. */
 	/* Stop video */
 	Video::stop();

@@ -4,7 +4,7 @@ HFILES = video.h draw.h system.h
 OFILES = diorama.o video.o draw.o system.o
 
 # Optimizer flags
-RFLAGS =
+RFLAGS = -O3 -Ofast -flto -mfpmath=sse -msse3 -m64
 
 # Libraries that we use
 INCLUDES = -I"sdl"
