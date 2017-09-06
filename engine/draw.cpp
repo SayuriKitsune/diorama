@@ -33,15 +33,17 @@ int Texture :: get_mask(int s)
 Texture :: Texture(int w,int h)
 {
 	/* Check for valid size */
-	width_mask = get_mask(w);
-	height_mask = get_mask(h);
-	if(width_mask < 0 || height_mask < 0)
+	pitch = get_mask(w);
+	width_mask = w-1;
+	height_mask = h-1;
+	if(pitch < 0)
 	{
 		/* Invalid texture */
 		width = 32;
 		height = 32;
-		width_mask = 5;
-		height_mask = 5;
+		width_mask = 31;
+		height_mask = 31;
+		pitch = 5;
 		make_test_pattern();
 	}
 	else
@@ -81,7 +83,7 @@ int Texture :: get_pixel(int x,int y)
 	uy = (unsigned int)y;
 	ux = (ux&width_mask);
 	uy = (uy&height_mask);
-	return data[ux+(uy<<width_mask)];
+	return data[ux+(uy<<pitch)];
 }
 
 /* Set pixel */
@@ -112,10 +114,7 @@ void Texture :: make_test_pattern()
 				c = DRAW_WHITE;
 			/* Borders become cyan/yellow pattern */
 			if(x == 0 || y == 0)
-			{
-				if(s)
-					c = DRAW_DARK;
-			}
+				c = DRAW_DARK;
 			/* Set */
 			set_pixel(x,y,c);
 		}
@@ -352,6 +351,11 @@ namespace Draw
 		int u,v,s;
 		Fragment f1,f2,f3;
 		unsigned char *colorb;
+		/* Init */
+		red = 0.0f;
+		green = 0.0f;
+		blue = 0.0f;
+		extra = 0.0f;
 		/* Convert colors to fragments */
 		pixel_to_fragment(a->color,&f1);
 		pixel_to_fragment(b->color,&f2);
@@ -415,6 +419,10 @@ namespace Draw
 				colorb[1] = (unsigned char)(f1.green*255.0f);
 				colorb[2] = (unsigned char)(f1.blue*255.0f);
 				colorb[3] = (unsigned char)(f1.extra*255.0f);
+				red += dred;
+				green += dgreen;
+				blue += dblue;
+				extra += dextra;
 			}
 			else
 			{
@@ -452,13 +460,61 @@ namespace Draw
 			af += d1;
 			bf += d2;
 			cf += d3;
-			red += dred;
-			green += dgreen;
-			blue += dblue;
-			extra += dextra;
 			data++;
 			pixels_filled++;
 		}
+	}
+	/* Draws a single rise of a triangle */
+	float rise(Vertex2D *top,Vertex2D *bottom,Vertex2D *side,int yfrom,int yto,float dlong,float dside,float xslong,float xsside,Texture *t,int mode)
+	{
+		int y; /* Current y coordinate */
+		float xlong; /* Long side x location */
+		float xside; /* Short side x location */
+		int from; /* Left side x coordinate of slice */
+		int to; /* Right side x coordinate of slice */
+		int xfrom; /* Actual left x coordinate of slice */
+		int xto; /* Actual right x coordinate of slice */
+		float a1,b1,c1; /* Starting barycentric coordinate */
+		float a2,b2,c2; /* Ending barycentric coordinate */
+		int *data; /* Pointer to pixel data */
+		/* Start x coordinates off */
+		xside = xsside;
+		xlong = xslong;
+		/* Process all the slices */
+		for(y = yfrom;y < yto;y++)
+		{
+			/* Perform a range check */
+			if(y >= 0 && y < Video::get_height())
+			{
+				/* Find range */
+				from = (int)xlong;
+				to = (int)xside;
+				if(from < to)
+				{
+					xfrom = from;
+					xto = to;
+				}
+				else
+				{
+					xfrom = to;
+					xto = from;
+				}
+				/* Limit range */
+				if(xfrom < 0)
+					xfrom = 0;
+				if(xto >= Video::get_width())
+					xto = Video::get_width();
+				/* Find interpolants */
+				barycentric(top,bottom,side,xfrom,y,&a1,&b1,&c1);
+				barycentric(top,bottom,side,xto,y,&a2,&b2,&c2);
+				data = Video::get_data(xfrom,y);
+				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xfrom,xto,y,data,mode);
+				/* Adjust */
+				xlong += dlong;
+				xside += dside;
+			}
+		}
+		return xlong;
 	}
 	/* Draw a 2D textured triangle */
 	void triangle(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *t,int mode)
@@ -469,10 +525,7 @@ namespace Draw
 		int dy1,dy2,dy3;
 		int dx1,dx2,dx3;
 		float d1,d2,d3;
-		float x12,x3;
-		int from,to,xf,xt,y;
-		int *data;
-		float a1,b1,c1,a2,b2,c2;
+		float xcont;
 		/* Find top and bottom */
 		top = find_top(a,b,c);
 		bottom = find_bottom(a,b,c);
@@ -497,76 +550,8 @@ namespace Draw
 		d2 = ((float)dx2)/((float)dy2); /* Bottom side */
 		d3 = ((float)dx3)/((float)dy3); /* Whole length */
 		/* Draw top slice of triangle */
-		x12 = (float)top->x;
-		x3 = (float)top->x;
-		for(y = 0;y < dy1;y++)
-		{
-			/* Perform a range check */
-			if((y+top->y) >= 0 || (y+top->y) < Video::get_height())
-			{
-				/* Find range */
-				from = (int)x3;
-				to = (int)x12;
-				if(from < to)
-				{
-					xf = from;
-					xt = to;
-				}
-				else
-				{
-					xf = to;
-					xt = from;
-				}
-				/* Limit range */
-				if(from < 0)
-					from = 0;
-				if(to >= Video::get_width())
-					to = Video::get_width();
-				/* Find interpolants */
-				barycentric(top,bottom,side,xf,y+top->y,&a1,&b1,&c1);
-				barycentric(top,bottom,side,xt,y+top->y,&a2,&b2,&c2);
-				data = Video::get_data(xf,y+top->y);
-				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xf,xt,y+top->y,data,mode);
-				/* Adjust */
-				x3 += d3;
-				x12 += d1;
-			}
-		}
-		/* Draw bottom slice of triangle */
-		x12 = (float)side->x;
-		for(y = dy1;y < dy3;y++)
-		{
-			/* Perform a range check */
-			if((y+top->y) >= 0 || (y+top->y) < Video::get_height())
-			{
-				/* Find range */
-				from = (int)x3;
-				to = (int)x12;
-				if(from < to)
-				{
-					xf = from;
-					xt = to;
-				}
-				else
-				{
-					xf = to;
-					xt = from;
-				}
-				/* Limit range */
-				if(from < 0)
-					from = 0;
-				if(to >= Video::get_width())
-					to = Video::get_width();
-				/* Find interpolants */
-				barycentric(top,bottom,side,xf,y+top->y,&a1,&b1,&c1);
-				barycentric(top,bottom,side,xt,y+top->y,&a2,&b2,&c2);
-				data = Video::get_data(xf,y+top->y);
-				slice(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xf,xt,y+top->y,data,mode);
-				/* Adjust */
-				x3 += d3;
-				x12 += d2;
-			}
-		}
+		xcont = rise(top,bottom,side,top->y,top->y+dy1,d3,d1,(float)top->x,(float)top->x,t,mode);
+		rise(top,bottom,side,top->y+dy1,top->y+dy3,d3,d2,xcont,(float)side->x,t,mode);
 	}
 	/* Get current fill count */
 	int get_pixels_filled()

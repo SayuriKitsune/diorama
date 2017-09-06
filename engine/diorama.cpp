@@ -7,13 +7,14 @@
 #include "video.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "draw.h"
 #include "system.h"
 
 /* Entry */
 int main(int argn,char **argv)
 {
-	int i,n,ts,dts,np,pxl;
+	int n,ts,dts,pxl;
 	float sec,tps,pps;
 	/* Start video */
 	if(Video::start())
@@ -23,15 +24,15 @@ int main(int argn,char **argv)
 	t->make_test_pattern();
 	Vertex2D a,b,c;
 	/* Benchmark parameters */
-	np = 4;
 	n = 0;
 	ts = System::get_tick();
+	pxl = 0;
 	while(Video::handle())
 	{
 		if(Video::begin())
 			return -1;
 		/* Draw np random triangles in one frame */
-		for(i = 0;i < np;i++)
+		for(;;)
 		{
 			Draw::make_random_vertex(&a,t);
 			Draw::make_random_vertex(&b,t);
@@ -39,35 +40,37 @@ int main(int argn,char **argv)
 			a.color = DRAW_CYAN;
 			b.color = DRAW_YELLOW;
 			c.color = DRAW_MAGENTA;
-			Draw::triangle(&a,&b,&c,t,0);
+			Draw::triangle(&a,&b,&c,t,DRAW_TEXTURE|DRAW_BLEND|DRAW_GOURAD);
+			n++;
+			dts = System::get_tick()-ts;
+			if(dts >= 5000)
+				break;
 		}
 		if(Video::end())
 			return -1;
-		/* Do 5 seconds worth of data */
-		pxl += Draw::get_pixels_filled();
-		n++;
 		dts = System::get_tick()-ts;
 		if(dts >= 5000)
+		{
+			/* fgetc(stdin); */
 			break;
+		}
 	}
 	/* Counts */
+	pxl = Draw::get_pixels_filled();
 	dts = System::get_tick()-ts;
 	printf("Duration: %dms\n",dts);
-	printf("Triangles: %d\n",n*np);
+	printf("Triangles: %d\n",n);
 	printf("Pixels: %d\n",pxl);
 	/* Power */
 	sec = (float)dts;
 	sec /= 1000.0f;
-	tps = (float)(n*np);
+	tps = (float)(n);
 	tps /= sec;
 	pps = (float)(pxl);
 	pps /= sec;
 	printf("Triangles/sec.: %0.1f\n",tps);
 	printf("Fill rate: %0.1f\n",pps);
-	/* 150 -> 170 -> 436 */
-	/* 469 (no gourad) */
-	/* 543 (no blend) */
-	/* 593 (no texture) */
+	/* 848 */
 	/* Goal: 120,000/sec. */
 	/* Stop video */
 	Video::stop();

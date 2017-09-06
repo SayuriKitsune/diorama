@@ -29,6 +29,7 @@ private:
 	int height; /* Height of texture */
 	int width_mask; /* Width wrap mask */
 	int height_mask; /* Height wrap mask */
+	int pitch; /* Image pitch shift */
 	int *data; /* Image pixel data */
 	/*
 		Gets mask value for size, or -1 if invalid
@@ -89,6 +90,7 @@ typedef struct
 /* Draw */
 namespace Draw
 {
+	typedef int fixed; /* Fixed point number */
 	/*
 		Draws a texture directly to the framebuffer
 		Used mostly for testing purposes
