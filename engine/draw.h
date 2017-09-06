@@ -29,7 +29,7 @@ private:
 	int height; /* Height of texture */
 	int width_mask; /* Width wrap mask */
 	int height_mask; /* Height wrap mask */
-	int pitch; /* Image pitch shift */
+	int pitch; /* Image pitch (in bit shifts not pixels) */
 	int *data; /* Image pixel data */
 	/*
 		Gets mask value for size, or -1 if invalid
@@ -40,6 +40,7 @@ public:
 	/*
 		Allocates a new blank texture
 		Sizes must be in powers of two
+		If an invalid texture is defined, this becomes the test pattern texture instead
 		w,h - size of texture (in pixels)
 	*/
 	Texture(int w,int h);
@@ -85,14 +86,11 @@ typedef struct
 	int u; /* Texture coordinate */
 	int v;
 	int color; /* Vertex color */
-	/* Internal use only */
-	Fragment fragment; /* Floating point version of color */
 }Vertex2D;
 
 /* Draw */
 namespace Draw
 {
-	typedef int fixed; /* Fixed point number */
 	/*
 		Draws a texture directly to the framebuffer
 		Used mostly for testing purposes

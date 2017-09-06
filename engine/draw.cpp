@@ -337,210 +337,8 @@ namespace Draw
 		/* s has been modified with the result */
 		return s;
 	}
-	/* Draws a slice of triangle (texture) */
-	void slice_t(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
-	{
-		int x,color,sample;
-		float af,bf,cf;
-		float d1,d2,d3;
-		float run;
-		float u1,v1,u2,v2,u3,v3;
-		float du,dv,uu,vv;
-		int u,v;
-		/* Init */
-		color = a->color;
-		/* Find the run length of the slice */
-		run = (float)(to-from);
-		d1 = a2-a1;
-		d2 = b2-b1;
-		d3 = c2-c1;
-		d1 /= run;
-		d2 /= run;
-		d3 /= run;
-		af = a1;
-		bf = b1;
-		cf = c1;
-		/* Texture coordinates */
-		u1 = (float)a->u;
-		u2 = (float)b->u;
-		u3 = (float)c->u;
-		v1 = (float)a->v;
-		v2 = (float)b->v;
-		v3 = (float)c->v;
-		uu = (u1*a1+u2*b1+u3*c1);
-		vv = (v1*a1+v2*b1+v3*c1);
-		du = (u1*a2+u2*b2+u3*c2)-uu;
-		dv = (v1*a2+v2*b2+v3*c2)-vv;
-		du /= run;
-		dv /= run;
-		/* Draw slice */
-		for(x = from;x < to;x++)
-		{
-			/* Find texture coordinate and sample */
-			u = (int)(uu);
-			v = (int)(vv);
-			sample = tex->get_pixel(u,v);
-			/* Alpha blend */
-			if(sample&0xFF000000)
-				data[0] = multiply_color(color,sample);
-			/* Advance */
-			uu += du;
-			vv += dv;
-			af += d1;
-			bf += d2;
-			cf += d3;
-			data++;
-			pixels_filled++;
-		}
-	}
-	/* Draws a slice of triangle (texture, gourad) */
-	void slice_tg(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
-	{
-		int x,color,sample;
-		float af,bf,cf;
-		float d1,d2,d3;
-		float run;
-		float u1,v1,u2,v2,u3,v3;
-		float dred,dgreen,dblue,dextra;
-		float red,green,blue,extra;
-		float du,dv,uu,vv;
-		int u,v;
-		unsigned char *colorb;
-		/* Init */
-		red = 0.0f;
-		green = 0.0f;
-		blue = 0.0f;
-		extra = 0.0f;
-		/* Find the run length of the slice */
-		run = (float)(to-from);
-		d1 = a2-a1;
-		d2 = b2-b1;
-		d3 = c2-c1;
-		d1 /= run;
-		d2 /= run;
-		d3 /= run;
-		af = a1;
-		bf = b1;
-		cf = c1;
-		/* Color pointer */
-		colorb = (unsigned char*)&color;
-		/* Initial color */
-		red =    (a->fragment.red*a1   +b->fragment.red*b1   +c->fragment.red*c1);
-		green =  (a->fragment.green*a1 +b->fragment.green*b1 +c->fragment.green*c1);
-		blue =   (a->fragment.blue*a1  +b->fragment.blue*b1  +c->fragment.blue*c1);
-		extra =  (a->fragment.extra*a1 +b->fragment.extra*b1 +c->fragment.extra*c1);
-		/* Gourad coordinates */
-		dred =   (a->fragment.red*a2   +b->fragment.red*b2   +c->fragment.red*c2)   -red;
-		dgreen = (a->fragment.green*a2 +b->fragment.green*b2 +c->fragment.green*c2) -green;
-		dblue =  (a->fragment.blue*a2  +b->fragment.blue*b2  +c->fragment.blue*c2)  -blue;
-		dextra = (a->fragment.extra*a2 +b->fragment.extra*b2 +c->fragment.extra*c2) -extra;
-		dred /= run;
-		dgreen /= run;
-		dblue /= run;
-		dextra /= run;
-		/* Texture coordinates */
-		u1 = (float)a->u;
-		u2 = (float)b->u;
-		u3 = (float)c->u;
-		v1 = (float)a->v;
-		v2 = (float)b->v;
-		v3 = (float)c->v;
-		uu = (u1*a1+u2*b1+u3*c1);
-		vv = (v1*a1+v2*b1+v3*c1);
-		du = (u1*a2+u2*b2+u3*c2)-uu;
-		dv = (v1*a2+v2*b2+v3*c2)-vv;
-		du /= run;
-		dv /= run;
-		/* Draw slice */
-		for(x = from;x < to;x++)
-		{
-			/* Find interpolated color */
-			if(red > 1.0f) red = 1.0f;
-			if(green > 1.0f) green = 1.0f;
-			if(blue > 1.0f) blue = 1.0f;
-			if(extra > 1.0f) extra = 1.0f;
-			colorb[0] = (unsigned char)(red*255.0f);
-			colorb[1] = (unsigned char)(green*255.0f);
-			colorb[2] = (unsigned char)(blue*255.0f);
-			colorb[3] = (unsigned char)(extra*255.0f);
-			red += dred;
-			green += dgreen;
-			blue += dblue;
-			extra += dextra;
-			/* Find texture coordinate and sample */
-			u = (int)(uu);
-			v = (int)(vv);
-			sample = tex->get_pixel(u,v);
-			/* Alpha blend */
-			if(sample&0xFF000000)
-				data[0] = multiply_color(color,sample);
-			/* Advance */
-			uu += du;
-			vv += dv;
-			af += d1;
-			bf += d2;
-			cf += d3;
-			data++;
-			pixels_filled++;
-		}
-	}
-	/* Draws a slice of triangle (texture, blend) */
-	void slice_tb(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
-	{
-		int x,color,sample;
-		float af,bf,cf;
-		float d1,d2,d3;
-		float run;
-		float u1,v1,u2,v2,u3,v3;
-		float du,dv,uu,vv;
-		int u,v,s;
-		/* Find the run length of the slice */
-		run = (float)(to-from);
-		d1 = a2-a1;
-		d2 = b2-b1;
-		d3 = c2-c1;
-		d1 /= run;
-		d2 /= run;
-		d3 /= run;
-		af = a1;
-		bf = b1;
-		cf = c1;
-		/* Texture coordinates */
-		u1 = (float)a->u;
-		u2 = (float)b->u;
-		u3 = (float)c->u;
-		v1 = (float)a->v;
-		v2 = (float)b->v;
-		v3 = (float)c->v;
-		uu = (u1*a1+u2*b1+u3*c1);
-		vv = (v1*a1+v2*b1+v3*c1);
-		du = (u1*a2+u2*b2+u3*c2)-uu;
-		dv = (v1*a2+v2*b2+v3*c2)-vv;
-		du /= run;
-		dv /= run;
-		/* Draw slice */
-		for(x = from;x < to;x++)
-		{
-			/* Find texture coordinate and sample */
-			u = (int)(uu);
-			v = (int)(vv);
-			sample = tex->get_pixel(u,v);
-			/* Alpha blend */
-			color = multiply_color(a->color,sample);
-			s = data[0];
-			data[0] = blend(x,y,color,s);
-			/* Advance */
-			uu += du;
-			vv += dv;
-			af += d1;
-			bf += d2;
-			cf += d3;
-			data++;
-			pixels_filled++;
-		}
-	}
-	/* Draws a slice of triangle (texture, gourad, blend) */
-	void slice_tgb(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
+	/* Draws a slice of triangle */
+	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Fragment *f1,Fragment *f2,Fragment *f3,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
 	{
 		int x,color,sample;
 		float af,bf,cf;
@@ -571,15 +369,15 @@ namespace Draw
 		/* Color pointer */
 		colorb = (unsigned char*)&color;
 		/* Initial color */
-		red =    (a->fragment.red*a1   +b->fragment.red*b1   +c->fragment.red*c1);
-		green =  (a->fragment.green*a1 +b->fragment.green*b1 +c->fragment.green*c1);
-		blue =   (a->fragment.blue*a1  +b->fragment.blue*b1  +c->fragment.blue*c1);
-		extra =  (a->fragment.extra*a1 +b->fragment.extra*b1 +c->fragment.extra*c1);
+		red =    (f1->red*a1   +f2->red*b1   +f3->red*c1);
+		green =  (f1->green*a1 +f2->green*b1 +f3->green*c1);
+		blue =   (f1->blue*a1  +f2->blue*b1  +f3->blue*c1);
+		extra =  (f1->extra*a1 +f2->extra*b1 +f3->extra*c1);
 		/* Gourad coordinates */
-		dred =   (a->fragment.red*a2   +b->fragment.red*b2   +c->fragment.red*c2)   -red;
-		dgreen = (a->fragment.green*a2 +b->fragment.green*b2 +c->fragment.green*c2) -green;
-		dblue =  (a->fragment.blue*a2  +b->fragment.blue*b2  +c->fragment.blue*c2)  -blue;
-		dextra = (a->fragment.extra*a2 +b->fragment.extra*b2 +c->fragment.extra*c2) -extra;
+		dred =   (f1->red*a2   +f2->red*b2   +f3->red*c2)   -red;
+		dgreen = (f1->green*a2 +f2->green*b2 +f3->green*c2) -green;
+		dblue =  (f1->blue*a2  +f2->blue*b2  +f3->blue*c2)  -blue;
+		dextra = (f1->extra*a2 +f2->extra*b2 +f3->extra*c2) -extra;
 		dred /= run;
 		dgreen /= run;
 		dblue /= run;
@@ -632,7 +430,7 @@ namespace Draw
 		}
 	}
 	/* Draws a single rise of a triangle */
-	float rise(Vertex2D *top,Vertex2D *bottom,Vertex2D *side,int yfrom,int yto,float dlong,float dside,float xslong,float xsside,Texture *t,int mode)
+	float rise(Vertex2D *top,Vertex2D *bottom,Vertex2D *side,Fragment *f1,Fragment *f2,Fragment *f3,int yfrom,int yto,float dlong,float dside,float xslong,float xsside,Texture *t,int mode)
 	{
 		int y; /* Current y coordinate */
 		float xlong; /* Long side x location */
@@ -675,21 +473,7 @@ namespace Draw
 				barycentric(top,bottom,side,xfrom,y,&a1,&b1,&c1);
 				barycentric(top,bottom,side,xto,y,&a2,&b2,&c2);
 				data = Video::get_data(xfrom,y);
-				switch(mode)
-				{
-				case 7:
-					slice_tgb(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xfrom,xto,y,data);
-					break;
-				case 5:
-					slice_tg(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xfrom,xto,y,data);
-					break;
-				case 6:
-					slice_tb(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xfrom,xto,y,data);
-					break;
-				case 4:
-					slice_t(top,bottom,side,t,a1,b1,c1,a2,b2,c2,xfrom,xto,y,data);
-					break;
-				}
+				slice(top,bottom,side,f1,f2,f3,t,a1,b1,c1,a2,b2,c2,xfrom,xto,y,data);
 				/* Adjust */
 				xlong += dlong;
 				xside += dside;
@@ -707,10 +491,12 @@ namespace Draw
 		int dx1,dx2,dx3; /* Differences in x */
 		float d1,d2,d3; /* Step sizes for x */
 		float xcont; /* Where the x coordinate on the long side is to be resumed at */
+		Fragment f1,f2,f3; /* Fragment versions of vertex colors */
+		Fragment *fbottom,*ftop,*fside; /* Fragment colors assigned to the points */
 		/* Update the floating point component for triangle colors */
-		pixel_to_fragment(a->color,&a->fragment);
-		pixel_to_fragment(b->color,&b->fragment);
-		pixel_to_fragment(c->color,&c->fragment);
+		pixel_to_fragment(a->color,&f1);
+		pixel_to_fragment(b->color,&f2);
+		pixel_to_fragment(c->color,&f3);
 		/* Find top and bottom */
 		top = find_top(a,b,c);
 		bottom = find_bottom(a,b,c);
@@ -723,6 +509,16 @@ namespace Draw
 			side = b;
 		if(side == top || side == bottom)
 			side = c;
+		/* Assign fragments */
+		if(bottom == a) fbottom = &f1;
+		if(bottom == b) fbottom = &f2;
+		if(bottom == c) fbottom = &f3;
+		if(top == a) ftop = &f1;
+		if(top == b) ftop = &f2;
+		if(top == c) ftop = &f3;
+		if(side == a) fside = &f1;
+		if(side == b) fside = &f2;
+		if(side == c) fside = &f3;
 		/* Find distances */
 		dy1 = side->y-top->y; /* From top to side */
 		dy2 = bottom->y-side->y; /* From side to bottom */
@@ -735,8 +531,8 @@ namespace Draw
 		d2 = ((float)dx2)/((float)dy2); /* Bottom side */
 		d3 = ((float)dx3)/((float)dy3); /* Whole length */
 		/* Draw top slice of triangle */
-		xcont = rise(top,bottom,side,top->y,top->y+dy1,d3,d1,(float)top->x,(float)top->x,t,mode);
-		rise(top,bottom,side,top->y+dy1,top->y+dy3,d3,d2,xcont,(float)side->x,t,mode);
+		xcont = rise(top,bottom,side,ftop,fbottom,fside,top->y,top->y+dy1,d3,d1,(float)top->x,(float)top->x,t,mode);
+		rise(top,bottom,side,ftop,fbottom,fside,top->y+dy1,top->y+dy3,d3,d2,xcont,(float)side->x,t,mode);
 	}
 	/* Get current fill count */
 	int get_pixels_filled()
