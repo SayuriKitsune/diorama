@@ -7,6 +7,7 @@
 #include <memory.h>
 #include "video.h"
 #include "draw.h"
+#include "system.h"
 
 /* Get mask */
 int Texture :: get_mask(int s)
@@ -341,47 +342,53 @@ namespace Draw
 	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Fragment *f1,Fragment *f2,Fragment *f3,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
 	{
 		int x,color,sample;
-		float af,bf,cf;
-		float d1,d2,d3;
-		float run;
+		fint af,bf,cf;
+		fint d1,d2,d3;
+		fint run;
 		float u1,v1,u2,v2,u3,v3;
-		float dred,dgreen,dblue,dextra;
-		float red,green,blue,extra;
-		float du,dv,uu,vv;
+		fint dred,dgreen,dblue,dextra;
+		fint red,green,blue,extra;
+		fint du,dv,uu,vv;
 		int u,v,s;
 		unsigned char *colorb;
 		/* Init */
-		red = 0.0f;
-		green = 0.0f;
-		blue = 0.0f;
-		extra = 0.0f;
+		red = 0;
+		green = 0;
+		blue = 0;
+		extra = 0;
 		/* Find the run length of the slice */
-		run = (float)(to-from);
-		d1 = a2-a1;
-		d2 = b2-b1;
-		d3 = c2-c1;
-		d1 /= run;
-		d2 /= run;
-		d3 /= run;
-		af = a1;
-		bf = b1;
-		cf = c1;
+		run = FINT_FROM_INT(to-from);
+		if(run <= 0)
+			return;
+		d1 = FINT_FROM_FLOAT(a2-a1);
+		d2 = FINT_FROM_FLOAT(b2-b1);
+		d3 = FINT_FROM_FLOAT(c2-c1);
+		d1 = FINT_DIV(d1,run);
+		d1 = FINT_DIV(d2,run);
+		d1 = FINT_DIV(d3,run);
+		af = FINT_FROM_FLOAT(a1);
+		bf = FINT_FROM_FLOAT(b1);
+		cf = FINT_FROM_FLOAT(c1);
 		/* Color pointer */
 		colorb = (unsigned char*)&color;
 		/* Initial color */
-		red =    (f1->red*a1   +f2->red*b1   +f3->red*c1);
-		green =  (f1->green*a1 +f2->green*b1 +f3->green*c1);
-		blue =   (f1->blue*a1  +f2->blue*b1  +f3->blue*c1);
-		extra =  (f1->extra*a1 +f2->extra*b1 +f3->extra*c1);
+		red =    FINT_FROM_FLOAT(f1->red*a1   +f2->red*b1   +f3->red*c1);
+		green =  FINT_FROM_FLOAT(f1->green*a1 +f2->green*b1 +f3->green*c1);
+		blue =   FINT_FROM_FLOAT(f1->blue*a1  +f2->blue*b1  +f3->blue*c1);
+		extra =  FINT_FROM_FLOAT(f1->extra*a1 +f2->extra*b1 +f3->extra*c1);
 		/* Gourad coordinates */
-		dred =   (f1->red*a2   +f2->red*b2   +f3->red*c2)   -red;
-		dgreen = (f1->green*a2 +f2->green*b2 +f3->green*c2) -green;
-		dblue =  (f1->blue*a2  +f2->blue*b2  +f3->blue*c2)  -blue;
-		dextra = (f1->extra*a2 +f2->extra*b2 +f3->extra*c2) -extra;
-		dred /= run;
-		dgreen /= run;
-		dblue /= run;
-		dextra /= run;
+		dred =   FINT_FROM_FLOAT(f1->red*a2   +f2->red*b2   +f3->red*c2);
+		dgreen = FINT_FROM_FLOAT(f1->green*a2 +f2->green*b2 +f3->green*c2);
+		dblue =  FINT_FROM_FLOAT(f1->blue*a2  +f2->blue*b2  +f3->blue*c2);
+		dextra = FINT_FROM_FLOAT(f1->extra*a2 +f2->extra*b2 +f3->extra*c2);
+		dred =   FINT_SUB(dred,red);
+		dgreen = FINT_SUB(dgreen,green);
+		dblue =  FINT_SUB(dblue,blue);
+		dextra = FINT_SUB(dextra,extra);
+		dred =   FINT_DIV(dred,run);
+		dgreen = FINT_DIV(dgreen,run);
+		dblue =  FINT_DIV(dblue,run);
+		dextra = FINT_DIV(dextra,run);
 		/* Texture coordinates */
 		u1 = (float)a->u;
 		u2 = (float)b->u;
@@ -389,31 +396,33 @@ namespace Draw
 		v1 = (float)a->v;
 		v2 = (float)b->v;
 		v3 = (float)c->v;
-		uu = (u1*a1+u2*b1+u3*c1);
-		vv = (v1*a1+v2*b1+v3*c1);
-		du = (u1*a2+u2*b2+u3*c2)-uu;
-		dv = (v1*a2+v2*b2+v3*c2)-vv;
-		du /= run;
-		dv /= run;
+		uu = FINT_FROM_FLOAT(u1*a1+u2*b1+u3*c1);
+		vv = FINT_FROM_FLOAT(v1*a1+v2*b1+v3*c1);
+		du = FINT_FROM_FLOAT(u1*a2+u2*b2+u3*c2);
+		dv = FINT_FROM_FLOAT(v1*a2+v2*b2+v3*c2);
+		du = FINT_SUB(du,uu);
+		dv = FINT_SUB(dv,vv);
+		du = FINT_DIV(du,run);
+		dv = FINT_DIV(dv,run);
 		/* Draw slice */
 		for(x = from;x < to;x++)
 		{
 			/* Find interpolated color */
-			if(red > 1.0f) red = 1.0f;
-			if(green > 1.0f) green = 1.0f;
-			if(blue > 1.0f) blue = 1.0f;
-			if(extra > 1.0f) extra = 1.0f;
-			colorb[0] = (unsigned char)(red*255.0f);
-			colorb[1] = (unsigned char)(green*255.0f);
-			colorb[2] = (unsigned char)(blue*255.0f);
-			colorb[3] = (unsigned char)(extra*255.0f);
+			if(red > 0xFF) red = 0xFF;
+			if(green > 0xFF) green = 0xFF;
+			if(blue > 0xFF) blue = 0xFF;
+			if(extra > 0xFF) extra = 0xFF;
+			colorb[0] = (unsigned char)(red);
+			colorb[1] = (unsigned char)(green);
+			colorb[2] = (unsigned char)(blue);
+			colorb[3] = (unsigned char)(extra);
 			red += dred;
 			green += dgreen;
 			blue += dblue;
 			extra += dextra;
 			/* Find texture coordinate and sample */
-			u = (int)(uu);
-			v = (int)(vv);
+			u = FINT_TO_INT(uu);
+			v = FINT_TO_INT(vv);
 			sample = tex->get_pixel(u,v);
 			/* Alpha blend */
 			color = multiply_color(color,sample);

@@ -7,6 +7,7 @@ typedef int fint;
 #define FINT_ADD(a,b) ((a)+(b))
 #define FINT_SUB(a,b) ((a)-(b))
 #define FINT_MUL(a,b) (((a)*(b))>>8)
+#define FINT_DIV(a,b) (((a)<<8)/(b))
 #define FINT_TO_INT(a) ((a)>>8)
 #define FINT_TO_FLOAT(a) (((float)a)/256.0f)
 #define FINT_FROM_INT(a) ((a)<<8)
