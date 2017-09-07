@@ -6,6 +6,7 @@ typedef int fint;
 #define FINT_ONE 1024
 #define FINT_MASK 1023
 #define FINT_TO_COLOR(a) ((a)>>2)
+#define FINT_FROM_COLOR(a) ((a)<<2)
 #define FINT_ADD(a,b) ((a)+(b))
 #define FINT_SUB(a,b) ((a)-(b))
 #define FINT_MUL(a,b) (((a)*(b))>>10)

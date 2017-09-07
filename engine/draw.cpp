@@ -256,10 +256,14 @@ namespace Draw
 	void pixel_to_fragment(int c,Fragment *f)
 	{
 		/* Separate channels */
-		f->red = (c&0x000000FF);
+		f->red =   (c&0x000000FF);
 		f->green = ((c&0x0000FF00)>>8);
-		f->blue = ((c&0x00FF0000)>>16);
+		f->blue =  ((c&0x00FF0000)>>16);
 		f->extra = ((c&0xFF000000)>>24);
+		f->red =   FINT_FROM_COLOR(f->red);
+		f->green = FINT_FROM_COLOR(f->green);
+		f->blue =  FINT_FROM_COLOR(f->blue);
+		f->extra = FINT_FROM_COLOR(f->extra);
 	}
 	/* Convert from fragment back to pixel */
 	int fragment_to_pixel(Fragment *f)
@@ -417,10 +421,10 @@ namespace Draw
 		for(x = from;x < to;x++)
 		{
 			/* Find interpolated color */
-			if(red > 0xFF)   colorb[0] = 0xFF; else colorb[0] = red;
-			if(green > 0xFF) colorb[1] = 0xFF; else colorb[1] = green;
-			if(blue > 0xFF)  colorb[2] = 0xFF; else colorb[2] = blue;
-			if(extra > 0xFF) colorb[3] = 0xFF; else colorb[3] = extra;
+			if(red > FINT_MASK)   colorb[0] = 0xFF; else colorb[0] = FINT_TO_COLOR(red);
+			if(green > FINT_MASK) colorb[1] = 0xFF; else colorb[1] = FINT_TO_COLOR(green);
+			if(blue > FINT_MASK)  colorb[2] = 0xFF; else colorb[2] = FINT_TO_COLOR(blue);
+			if(extra > FINT_MASK) colorb[3] = 0xFF; else colorb[3] = FINT_TO_COLOR(extra);
 			red += dred;
 			green += dgreen;
 			blue += dblue;
