@@ -347,7 +347,8 @@ namespace Draw
 	/* Draws a slice of triangle */
 	fint draw_a1,draw_b1,draw_c1; /* Barycentric coordinate (from) */
 	fint draw_a2,draw_b2,draw_c2; /* Barycentric coordinate (to) */
-	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Fragment *f1,Fragment *f2,Fragment *f3,Texture *tex,int from,int to,int y,int *data)
+	Fragment draw_f1,draw_f2,draw_f3; /* Fragment versions of each vertex color */
+	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,int from,int to,int y,int *data)
 	{
 		int x,color,sample;
 		fint af,bf,cf;
@@ -380,15 +381,15 @@ namespace Draw
 		/* Color pointer */
 		colorb = (unsigned char*)&color;
 		/* Initial color */
-		red =    FINT_MUL(f1->red,draw_a1)  +FINT_MUL(f2->red,draw_b1)  +FINT_MUL(f3->red,draw_c1);
-		green =  FINT_MUL(f1->green,draw_a1)+FINT_MUL(f2->green,draw_b1)+FINT_MUL(f3->green,draw_c1);
-		blue =   FINT_MUL(f1->blue,draw_a1) +FINT_MUL(f2->blue,draw_b1) +FINT_MUL(f3->blue,draw_c1);
-		extra =  FINT_MUL(f1->extra,draw_a1)+FINT_MUL(f2->extra,draw_b1)+FINT_MUL(f3->extra,draw_c1);
+		red =    FINT_MUL(draw_f1.red,draw_a1)  +FINT_MUL(draw_f2.red,draw_b1)  +FINT_MUL(draw_f3.red,draw_c1);
+		green =  FINT_MUL(draw_f1.green,draw_a1)+FINT_MUL(draw_f2.green,draw_b1)+FINT_MUL(draw_f3.green,draw_c1);
+		blue =   FINT_MUL(draw_f1.blue,draw_a1) +FINT_MUL(draw_f2.blue,draw_b1) +FINT_MUL(draw_f3.blue,draw_c1);
+		extra =  FINT_MUL(draw_f1.extra,draw_a1)+FINT_MUL(draw_f2.extra,draw_b1)+FINT_MUL(draw_f3.extra,draw_c1);
 		/* Gourad coordinates */
-		dred =   FINT_MUL(f1->red,draw_a2)  +FINT_MUL(f2->red,draw_b2)  +FINT_MUL(f3->red,draw_c2);
-		dgreen = FINT_MUL(f1->green,draw_a2)+FINT_MUL(f2->green,draw_b2)+FINT_MUL(f3->green,draw_c2);
-		dblue =  FINT_MUL(f1->blue,draw_a2) +FINT_MUL(f2->blue,draw_b2) +FINT_MUL(f3->blue,draw_c2);
-		dextra = FINT_MUL(f1->extra,draw_a2)+FINT_MUL(f2->extra,draw_b2)+FINT_MUL(f3->extra,draw_c2);
+		dred =   FINT_MUL(draw_f1.red,draw_a2)  +FINT_MUL(draw_f2.red,draw_b2)  +FINT_MUL(draw_f3.red,draw_c2);
+		dgreen = FINT_MUL(draw_f1.green,draw_a2)+FINT_MUL(draw_f2.green,draw_b2)+FINT_MUL(draw_f3.green,draw_c2);
+		dblue =  FINT_MUL(draw_f1.blue,draw_a2) +FINT_MUL(draw_f2.blue,draw_b2) +FINT_MUL(draw_f3.blue,draw_c2);
+		dextra = FINT_MUL(draw_f1.extra,draw_a2)+FINT_MUL(draw_f2.extra,draw_b2)+FINT_MUL(draw_f3.extra,draw_c2);
 		dred =   FINT_SUB(dred,red);
 		dgreen = FINT_SUB(dgreen,green);
 		dblue =  FINT_SUB(dblue,blue);
@@ -443,7 +444,7 @@ namespace Draw
 		}
 	}
 	/* Draws a single rise of a triangle */
-	float rise(Vertex2D *top,Vertex2D *bottom,Vertex2D *side,Fragment *f1,Fragment *f2,Fragment *f3,int yfrom,int yto,float dlong,float dside,float xslong,float xsside,Texture *t,int mode)
+	float rise(Vertex2D *top,Vertex2D *bottom,Vertex2D *side,int yfrom,int yto,float dlong,float dside,float xslong,float xsside,Texture *t,int mode)
 	{
 		int y; /* Current y coordinate */
 		float xlong; /* Long side x location */
@@ -485,7 +486,7 @@ namespace Draw
 				barycentric_fast(side,xto,y,&draw_a2,&draw_b2,&draw_c2);
 				/* Draw slice */
 				data = Video::get_data(xfrom,y);
-				slice(top,bottom,side,f1,f2,f3,t,xfrom,xto,y,data);
+				slice(top,bottom,side,t,xfrom,xto,y,data);
 				/* Adjust */
 				xlong += dlong;
 				xside += dside;
@@ -503,12 +504,6 @@ namespace Draw
 		int dx1,dx2,dx3; /* Differences in x */
 		float d1,d2,d3; /* Step sizes for x */
 		float xcont; /* Where the x coordinate on the long side is to be resumed at */
-		Fragment f1,f2,f3; /* Fragment versions of vertex colors */
-		Fragment *fbottom,*ftop,*fside; /* Fragment colors assigned to the points */
-		/* Update the floating point component for triangle colors */
-		pixel_to_fragment(a->color,&f1);
-		pixel_to_fragment(b->color,&f2);
-		pixel_to_fragment(c->color,&f3);
 		/* Find top and bottom */
 		top = find_top(a,b,c);
 		bottom = find_bottom(a,b,c);
@@ -522,15 +517,15 @@ namespace Draw
 		if(side == top || side == bottom)
 			side = c;
 		/* Assign fragments */
-		if(bottom == a) fbottom = &f1;
-		if(bottom == b) fbottom = &f2;
-		if(bottom == c) fbottom = &f3;
-		if(top == a) ftop = &f1;
-		if(top == b) ftop = &f2;
-		if(top == c) ftop = &f3;
-		if(side == a) fside = &f1;
-		if(side == b) fside = &f2;
-		if(side == c) fside = &f3;
+		if(top == a) pixel_to_fragment(a->color,&draw_f1);
+		if(top == b) pixel_to_fragment(b->color,&draw_f1);
+		if(top == c) pixel_to_fragment(c->color,&draw_f1);
+		if(bottom == a) pixel_to_fragment(a->color,&draw_f2);
+		if(bottom == b) pixel_to_fragment(b->color,&draw_f2);
+		if(bottom == c) pixel_to_fragment(c->color,&draw_f2);
+		if(side == a) pixel_to_fragment(a->color,&draw_f3);
+		if(side == b) pixel_to_fragment(b->color,&draw_f3);
+		if(side == c) pixel_to_fragment(c->color,&draw_f3);
 		/* Call once to populate barycentric intermediates */
 		barycentric(top,bottom,side,0,0,&d1,&d2,&d3);
 		if(draw_det == 0)
@@ -547,8 +542,8 @@ namespace Draw
 		d2 = ((float)dx2)/((float)dy2); /* Bottom side */
 		d3 = ((float)dx3)/((float)dy3); /* Whole length */
 		/* Draw top slice of triangle */
-		xcont = rise(top,bottom,side,ftop,fbottom,fside,top->y,top->y+dy1,d3,d1,(float)top->x,(float)top->x,t,mode);
-		rise(top,bottom,side,ftop,fbottom,fside,top->y+dy1,top->y+dy3,d3,d2,xcont,(float)side->x,t,mode);
+		xcont = rise(top,bottom,side,top->y,top->y+dy1,d3,d1,(float)top->x,(float)top->x,t,mode);
+		rise(top,bottom,side,top->y+dy1,top->y+dy3,d3,d2,xcont,(float)side->x,t,mode);
 	}
 	/* Get current fill count */
 	int get_pixels_filled()
