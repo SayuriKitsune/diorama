@@ -40,7 +40,7 @@ int main(int argn,char **argv)
 			a.color = DRAW_CYAN;
 			b.color = DRAW_YELLOW;
 			c.color = DRAW_MAGENTA;
-			Draw::triangle(&a,&b,&c,t,DRAW_TEXTURE|DRAW_GOURAD|DRAW_BLEND);
+			Draw::triangle(&a,&b,&c,t,DRAW_BLEND);
 			n++;
 			dts = System::get_tick()-ts;
 			if(dts >= 5000)
@@ -51,7 +51,7 @@ int main(int argn,char **argv)
 		dts = System::get_tick()-ts;
 		if(dts >= 5000)
 		{
-			/* fgetc(stdin); */
+			fgetc(stdin);
 			break;
 		}
 	}

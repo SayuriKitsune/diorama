@@ -17,6 +17,7 @@
 #define DRAW_TRANSLUCENT 0x80FFFFFF
 
 /* Render modes */
+#define DRAW_RAW 0
 #define DRAW_GOURAD 1
 #define DRAW_BLEND 2
 #define DRAW_TEXTURE 4

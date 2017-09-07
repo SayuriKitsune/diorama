@@ -401,7 +401,7 @@ namespace Draw
 			color = a->color;
 		}
 		/* Texture coordinates */
-		if(mode&DRAW_TEXTURE)
+		if(!mode || (mode&DRAW_TEXTURE))
 		{
 			u1 = FINT_FROM_INT(a->u);
 			u2 = FINT_FROM_INT(b->u);
@@ -441,6 +441,23 @@ namespace Draw
 				color = multiply_color(color,sample);
 				s = data[0];
 				data[0] = blend(x,y,color,s);
+				/* Advance */
+				uu += du;
+				vv += dv;
+				data++;
+			}
+			break;
+		case 6:
+			for(x = from;x < to;x++) /* TEXTURE BLEND */
+			{
+				/* Find texture coordinate and sample */
+				u = FINT_TO_INT(uu);
+				v = FINT_TO_INT(vv);
+				sample = tex->get_pixel(u,v);
+				/* Mix color */
+				sample = multiply_color(color,sample);
+				s = data[0];
+				data[0] = blend(x,y,sample,s);
 				/* Advance */
 				uu += du;
 				vv += dv;
@@ -488,12 +505,56 @@ namespace Draw
 				data++;
 			}
 			break;
-		case 0:
-			for(x = from;x < to;x++) /* FLAT */
+		case 3:
+			for(x = from;x < to;x++) /* GOURAD BLEND */
 			{
+				/* Find interpolated color */
+				if(red > FINT_MASK)   colorb[0] = 0xFF; else colorb[0] = FINT_TO_COLOR(red);
+				if(green > FINT_MASK) colorb[1] = 0xFF; else colorb[1] = FINT_TO_COLOR(green);
+				if(blue > FINT_MASK)  colorb[2] = 0xFF; else colorb[2] = FINT_TO_COLOR(blue);
+				if(extra > FINT_MASK) colorb[3] = 0xFF; else colorb[3] = FINT_TO_COLOR(extra);
+				red += dred;
+				green += dgreen;
+				blue += dblue;
+				extra += dextra;
+				/* Directly blend with current color */
+				s = data[0];
+				data[0] = blend(x,y,color,s);
+				/* Advance */
+				data++;
+			}
+			break;
+		case 1:
+			for(x = from;x < to;x++) /* GOURAD */
+			{
+				/* Find interpolated color */
+				if(red > FINT_MASK)   colorb[0] = 0xFF; else colorb[0] = FINT_TO_COLOR(red);
+				if(green > FINT_MASK) colorb[1] = 0xFF; else colorb[1] = FINT_TO_COLOR(green);
+				if(blue > FINT_MASK)  colorb[2] = 0xFF; else colorb[2] = FINT_TO_COLOR(blue);
+				if(extra > FINT_MASK) colorb[3] = 0xFF; else colorb[3] = FINT_TO_COLOR(extra);
+				red += dred;
+				green += dgreen;
+				blue += dblue;
+				extra += dextra;
 				/* Set color */
 				data[0] = color;
 				/* Advance */
+				data++;
+			}
+			break;
+		case 0:
+			for(x = from;x < to;x++) /* RAW TEXTURE */
+			{
+				/* Find texture coordinate and sample */
+				u = FINT_TO_INT(uu);
+				v = FINT_TO_INT(vv);
+				sample = tex->get_pixel(u,v);
+				/* Set color */
+				if(sample&0xFF000000)
+					data[0] = sample;
+				/* Advance */
+				uu += du;
+				vv += dv;
 				data++;
 			}
 			break;
@@ -562,6 +623,9 @@ namespace Draw
 		int dx1,dx2,dx3; /* Differences in x */
 		float d1,d2,d3; /* Step sizes for x */
 		float xcont; /* Where the x coordinate on the long side is to be resumed at */
+		/* Invalid mode */
+		if(mode == 2)
+			return;
 		/* Find top and bottom */
 		top = find_top(a,b,c);
 		bottom = find_bottom(a,b,c);
