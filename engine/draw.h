@@ -21,6 +21,9 @@
 #define DRAW_BLEND 2
 #define DRAW_TEXTURE 4
 
+/* Includes */
+#include "system.h"
+
 /* Texture */
 class Texture
 {
@@ -72,10 +75,10 @@ public:
 /* Color fragment */
 typedef struct
 {
-	float red; /* Channels */
-	float green;
-	float blue;
-	float extra;
+	fint red; /* Channels */
+	fint green;
+	fint blue;
+	fint extra;
 }Fragment;
 
 /* 2D Vertex */
@@ -108,11 +111,12 @@ namespace Draw
 	extern void make_random_vertex(Vertex2D *v,Texture *t);
 	/*
 		Calculate the barycentric coordinates between three points
+		Returns zero if the given triangle is invalid (degenerate)
 		a,b,c - the three 2D vertices
 		x,y - coordinate to convert
 		af,bf,cf - barycentric coordinates relative to given vertices
 	*/
-	extern void barycentric(Vertex2D *a,Vertex2D *b,Vertex2D *c,int x,int y,float *af,float *bf,float *cf);
+	extern int barycentric(Vertex2D *a,Vertex2D *b,Vertex2D *c,int x,int y,float *af,float *bf,float *cf);
 	/*
 		Converts a pixel to fragment
 		c - the pixel

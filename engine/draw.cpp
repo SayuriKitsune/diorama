@@ -7,7 +7,6 @@
 #include <memory.h>
 #include "video.h"
 #include "draw.h"
-#include "system.h"
 
 /* Get mask */
 int Texture :: get_mask(int s)
@@ -198,81 +197,83 @@ namespace Draw
 		v->color = DRAW_WHITE;
 	}
 	/* Look up barycentric coordinates */
-	void barycentric(Vertex2D *a,Vertex2D *b,Vertex2D *c,int x,int y,float *af,float *bf,float *cf)
+	int draw_y2my3; /* Components of the calculation we only need once per triangle */
+	int draw_x1mx3;
+	int draw_x3mx2;
+	int draw_y1my3;
+	int draw_y3my1;
+	int draw_det;
+	int barycentric(Vertex2D *a,Vertex2D *b,Vertex2D *c,int x,int y,float *af,float *bf,float *cf)
 	{
-		int y2my3;
-		int x1mx3;
-		int x3mx2;
-		int y1my3;
-		int y3my1;
 		int xmx3;
 		int ymy3;
-		int det,tx,ty;
+		int tx,ty;
 		/* Find components */
-		y2my3 = b->y-c->y;
-		x1mx3 = a->x-c->x;
-		x3mx2 = c->x-b->x;
-		y1my3 = a->y-c->y;
-		y3my1 = c->y-a->y;
+		draw_y2my3 = b->y-c->y;
+		draw_x1mx3 = a->x-c->x;
+		draw_x3mx2 = c->x-b->x;
+		draw_y1my3 = a->y-c->y;
+		draw_y3my1 = c->y-a->y;
 		/* Find DET */
-		det = (y2my3*x1mx3)+(x3mx2*y1my3);
+		draw_det = (draw_y2my3*draw_x1mx3)+(draw_x3mx2*draw_y1my3);
+		if(draw_det == 0)
+			return 0; /* Triangle is a degenerate */
 		/* Find additional components */
 		xmx3 = (x-c->x);
 		ymy3 = (y-c->y);
-		/* Find TX */
-		tx = (y2my3*xmx3)+(x3mx2*ymy3);
-		ty = (y3my1*xmx3)+(x1mx3*ymy3);
-		/* Output as float */
-		af[0] = ((float)tx)/((float)det);
-		bf[0] = ((float)ty)/((float)det);
+		/* Find tx and ty */
+		tx = (draw_y2my3*xmx3)+(draw_x3mx2*ymy3);
+		ty = (draw_y3my1*xmx3)+(draw_x1mx3*ymy3);
+		/* Output result */
+		af[0] = ((float)tx)/((float)draw_det);
+		bf[0] = ((float)ty)/((float)draw_det);
+		cf[0] = 1.0f-af[0]-bf[0];
+		return 1;
+	}
+	/* Look up barycentric coordinates (faster) having already found the more constant intermediate values */
+	void barycentric_fast(Vertex2D *c,int x,int y,float *af,float *bf,float *cf)
+	{
+		int xmx3;
+		int ymy3;
+		int tx,ty;
+		/* Find additional components */
+		xmx3 = (x-c->x);
+		ymy3 = (y-c->y);
+		/* Find tx and ty */
+		tx = (draw_y2my3*xmx3)+(draw_x3mx2*ymy3);
+		ty = (draw_y3my1*xmx3)+(draw_x1mx3*ymy3);
+		/* Output result */
+		af[0] = ((float)tx)/((float)draw_det);
+		bf[0] = ((float)ty)/((float)draw_det);
 		cf[0] = 1.0f-af[0]-bf[0];
 	}
 	/* Convert from pixel to fragment */
 	void pixel_to_fragment(int c,Fragment *f)
 	{
-		unsigned int red,green,blue,extra;
 		/* Separate channels */
-		red = (c&0x000000FF);
-		green = ((c&0x0000FF00)>>8);
-		blue = ((c&0x00FF0000)>>16);
-		extra = ((c&0xFF000000)>>24);
-		/* Convert to float */
-		f->red = (float)red;
-		f->green = (float)green;
-		f->blue = (float)blue;
-		f->extra = (float)extra;
-		f->red /= 255.0f;
-		f->green /= 255.0f;
-		f->blue /= 255.0f;
-		f->extra /= 255.0f;
+		f->red = (c&0x000000FF);
+		f->green = ((c&0x0000FF00)>>8);
+		f->blue = ((c&0x00FF0000)>>16);
+		f->extra = ((c&0xFF000000)>>24);
 	}
 	/* Convert from fragment back to pixel */
 	int fragment_to_pixel(Fragment *f)
 	{
-		unsigned int red,green,blue,extra,c;
+		unsigned int c;
 		/* Clamp */
-		if(f->red < 0.0f)
-			f->red = 0.0f;
-		if(f->green < 0.0f)
-			f->green = 0.0f;
-		if(f->blue < 0.0f)
-			f->blue = 0.0f;
-		if(f->red > 1.0f)
-			f->red = 1.0f;
-		if(f->green > 1.0f)
-			f->green = 1.0f;
-		if(f->blue > 1.0f)
-			f->blue = 1.0f;
-		/* Expand */
-		red = (unsigned int)(f->red*255.0f);
-		green = (unsigned int)(f->green*255.0f);
-		blue = (unsigned int)(f->blue*255.0f);
-		extra = (unsigned int)(f->extra*255.0f);
+		if(f->red   < 0)      f->red = 0;
+		if(f->green < 0)    f->green = 0;
+		if(f->blue  < 0)     f->blue = 0;
+		if(f->extra < 0)    f->extra = 0;
+		if(f->red   > FINT_MASK)   f->red = FINT_MASK;
+		if(f->green > FINT_MASK) f->green = FINT_MASK;
+		if(f->blue  > FINT_MASK)  f->blue = FINT_MASK;
+		if(f->extra > FINT_MASK) f->extra = FINT_MASK;
 		/* Combine */
-		c = red;
-		c += (green<<8);
-		c += (blue<<16);
-		c += (extra<<24);
+		c = FINT_TO_COLOR(f->red);
+		c += (FINT_TO_COLOR(f->green)<<8);
+		c += (FINT_TO_COLOR(f->blue)<<16);
+		c += (FINT_TO_COLOR(f->extra)<<24);
 		return c;
 	}
 	/* Interpolate three colors */
@@ -339,13 +340,15 @@ namespace Draw
 		return s;
 	}
 	/* Draws a slice of triangle */
-	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Fragment *f1,Fragment *f2,Fragment *f3,Texture *tex,float a1,float b1,float c1,float a2,float b2,float c2,int from,int to,int y,int *data)
+	fint draw_a1,draw_b1,draw_c1; /* Barycentric coordinate (from) */
+	fint draw_a2,draw_b2,draw_c2; /* Barycentric coordinate (to) */
+	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Fragment *f1,Fragment *f2,Fragment *f3,Texture *tex,int from,int to,int y,int *data)
 	{
 		int x,color,sample;
 		fint af,bf,cf;
 		fint d1,d2,d3;
 		fint run;
-		float u1,v1,u2,v2,u3,v3;
+		fint u1,v1,u2,v2,u3,v3;
 		fint dred,dgreen,dblue,dextra;
 		fint red,green,blue,extra;
 		fint du,dv,uu,vv;
@@ -360,27 +363,27 @@ namespace Draw
 		run = FINT_FROM_INT(to-from);
 		if(run <= 0)
 			return;
-		d1 = FINT_FROM_FLOAT(a2-a1);
-		d2 = FINT_FROM_FLOAT(b2-b1);
-		d3 = FINT_FROM_FLOAT(c2-c1);
+		d1 = draw_a2-draw_a1;
+		d2 = draw_b2-draw_b1;
+		d3 = draw_c2-draw_c1;
 		d1 = FINT_DIV(d1,run);
 		d1 = FINT_DIV(d2,run);
 		d1 = FINT_DIV(d3,run);
-		af = FINT_FROM_FLOAT(a1);
-		bf = FINT_FROM_FLOAT(b1);
-		cf = FINT_FROM_FLOAT(c1);
+		af = draw_a1;
+		bf = draw_b1;
+		cf = draw_c1;
 		/* Color pointer */
 		colorb = (unsigned char*)&color;
 		/* Initial color */
-		red =    FINT_FROM_FLOAT(f1->red*a1   +f2->red*b1   +f3->red*c1);
-		green =  FINT_FROM_FLOAT(f1->green*a1 +f2->green*b1 +f3->green*c1);
-		blue =   FINT_FROM_FLOAT(f1->blue*a1  +f2->blue*b1  +f3->blue*c1);
-		extra =  FINT_FROM_FLOAT(f1->extra*a1 +f2->extra*b1 +f3->extra*c1);
+		red =    FINT_MUL(f1->red,draw_a1)  +FINT_MUL(f2->red,draw_b1)  +FINT_MUL(f3->red,draw_c1);
+		green =  FINT_MUL(f1->green,draw_a1)+FINT_MUL(f2->green,draw_b1)+FINT_MUL(f3->green,draw_c1);
+		blue =   FINT_MUL(f1->blue,draw_a1) +FINT_MUL(f2->blue,draw_b1) +FINT_MUL(f3->blue,draw_c1);
+		extra =  FINT_MUL(f1->extra,draw_a1)+FINT_MUL(f2->extra,draw_b1)+FINT_MUL(f3->extra,draw_c1);
 		/* Gourad coordinates */
-		dred =   FINT_FROM_FLOAT(f1->red*a2   +f2->red*b2   +f3->red*c2);
-		dgreen = FINT_FROM_FLOAT(f1->green*a2 +f2->green*b2 +f3->green*c2);
-		dblue =  FINT_FROM_FLOAT(f1->blue*a2  +f2->blue*b2  +f3->blue*c2);
-		dextra = FINT_FROM_FLOAT(f1->extra*a2 +f2->extra*b2 +f3->extra*c2);
+		dred =   FINT_MUL(f1->red,draw_a2)  +FINT_MUL(f2->red,draw_b2)  +FINT_MUL(f3->red,draw_c2);
+		dgreen = FINT_MUL(f1->green,draw_a2)+FINT_MUL(f2->green,draw_b2)+FINT_MUL(f3->green,draw_c2);
+		dblue =  FINT_MUL(f1->blue,draw_a2) +FINT_MUL(f2->blue,draw_b2) +FINT_MUL(f3->blue,draw_c2);
+		dextra = FINT_MUL(f1->extra,draw_a2)+FINT_MUL(f2->extra,draw_b2)+FINT_MUL(f3->extra,draw_c2);
 		dred =   FINT_SUB(dred,red);
 		dgreen = FINT_SUB(dgreen,green);
 		dblue =  FINT_SUB(dblue,blue);
@@ -390,16 +393,16 @@ namespace Draw
 		dblue =  FINT_DIV(dblue,run);
 		dextra = FINT_DIV(dextra,run);
 		/* Texture coordinates */
-		u1 = (float)a->u;
-		u2 = (float)b->u;
-		u3 = (float)c->u;
-		v1 = (float)a->v;
-		v2 = (float)b->v;
-		v3 = (float)c->v;
-		uu = FINT_FROM_FLOAT(u1*a1+u2*b1+u3*c1);
-		vv = FINT_FROM_FLOAT(v1*a1+v2*b1+v3*c1);
-		du = FINT_FROM_FLOAT(u1*a2+u2*b2+u3*c2);
-		dv = FINT_FROM_FLOAT(v1*a2+v2*b2+v3*c2);
+		u1 = FINT_FROM_INT(a->u);
+		u2 = FINT_FROM_INT(b->u);
+		u3 = FINT_FROM_INT(c->u);
+		v1 = FINT_FROM_INT(a->v);
+		v2 = FINT_FROM_INT(b->v);
+		v3 = FINT_FROM_INT(c->v);
+		uu = FINT_MUL(u1,draw_a1)+FINT_MUL(u2,draw_b1)+FINT_MUL(u3,draw_c1);
+		vv = FINT_MUL(v1,draw_a1)+FINT_MUL(v2,draw_b1)+FINT_MUL(v3,draw_c1);
+		du = FINT_MUL(u1,draw_a2)+FINT_MUL(u2,draw_b2)+FINT_MUL(u3,draw_c2);
+		dv = FINT_MUL(v1,draw_a2)+FINT_MUL(v2,draw_b2)+FINT_MUL(v3,draw_c2);
 		du = FINT_SUB(du,uu);
 		dv = FINT_SUB(dv,vv);
 		du = FINT_DIV(du,run);
@@ -408,14 +411,10 @@ namespace Draw
 		for(x = from;x < to;x++)
 		{
 			/* Find interpolated color */
-			if(red > 0xFF) red = 0xFF;
-			if(green > 0xFF) green = 0xFF;
-			if(blue > 0xFF) blue = 0xFF;
-			if(extra > 0xFF) extra = 0xFF;
-			colorb[0] = (unsigned char)(red);
-			colorb[1] = (unsigned char)(green);
-			colorb[2] = (unsigned char)(blue);
-			colorb[3] = (unsigned char)(extra);
+			if(red > 0xFF)   colorb[0] = 0xFF; else colorb[0] = red;
+			if(green > 0xFF) colorb[1] = 0xFF; else colorb[1] = green;
+			if(blue > 0xFF)  colorb[2] = 0xFF; else colorb[2] = blue;
+			if(extra > 0xFF) colorb[3] = 0xFF; else colorb[3] = extra;
 			red += dred;
 			green += dgreen;
 			blue += dblue;
@@ -448,9 +447,9 @@ namespace Draw
 		int to; /* Right side x coordinate of slice */
 		int xfrom; /* Actual left x coordinate of slice */
 		int xto; /* Actual right x coordinate of slice */
-		float a1,b1,c1; /* Starting barycentric coordinate */
-		float a2,b2,c2; /* Ending barycentric coordinate */
 		int *data; /* Pointer to pixel data */
+		float a1,b1,c1;
+		float a2,b2,c2;
 		/* Start x coordinates off */
 		xside = xsside;
 		xlong = xslong;
@@ -479,10 +478,17 @@ namespace Draw
 				if(xto >= Video::get_width())
 					xto = Video::get_width();
 				/* Find interpolants */
-				barycentric(top,bottom,side,xfrom,y,&a1,&b1,&c1);
-				barycentric(top,bottom,side,xto,y,&a2,&b2,&c2);
+				barycentric_fast(side,xfrom,y,&a1,&b1,&c1);
+				barycentric_fast(side,xto,y,&a2,&b2,&c2);
+				draw_a1 = FINT_FROM_FLOAT(a1);
+				draw_b1 = FINT_FROM_FLOAT(b1);
+				draw_c1 = FINT_FROM_FLOAT(c1);
+				draw_a2 = FINT_FROM_FLOAT(a2);
+				draw_b2 = FINT_FROM_FLOAT(b2);
+				draw_c2 = FINT_FROM_FLOAT(c2);
+				/* Draw slice */
 				data = Video::get_data(xfrom,y);
-				slice(top,bottom,side,f1,f2,f3,t,a1,b1,c1,a2,b2,c2,xfrom,xto,y,data);
+				slice(top,bottom,side,f1,f2,f3,t,xfrom,xto,y,data);
 				/* Adjust */
 				xlong += dlong;
 				xside += dside;
@@ -528,6 +534,8 @@ namespace Draw
 		if(side == a) fside = &f1;
 		if(side == b) fside = &f2;
 		if(side == c) fside = &f3;
+		/* Call once to populate barycentric intermediates */
+		barycentric(top,bottom,side,0,0,&d1,&d2,&d3);
 		/* Find distances */
 		dy1 = side->y-top->y; /* From top to side */
 		dy2 = bottom->y-side->y; /* From side to bottom */
