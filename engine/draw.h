@@ -22,6 +22,28 @@
 #define DRAW_BLEND 2
 #define DRAW_TEXTURE 4
 
+/* REMARKS: */
+/*
+	DRAW_RAW (Mode 0) is the fastest and probably most common mode,
+	drawing a texture mapped triangle directly without any shading or blending against the scene.
+	Textures can still have invisible pixels if the color has 0 in the alpha channel.
+
+	DRAW_TEXTURE (Mode 4) is good for flat shading.
+
+	Modes 5 through 7 shouldn't be used too often,
+	static shading and lighting should be done instead where possible.
+
+	DRAW_GOURAD (Mode 1) is good for drawing untextured triangles.
+	It is also the second fastest mode which is great since you still get realtime shading.
+*/
+/* Mode 0: ~4840 ~22552 */
+/* Mode 1: ~6829 ~8064  */
+/* Mode 3: ~1773 ~2693  */
+/* Mode 4: ~2052 ~6446  */
+/* Mode 5: ~1805 ~2925  */
+/* Mode 6: ~1277 ~2885  */
+/* Mode 7: ~1097 ~1921  */
+
 /* Includes */
 #include "system.h"
 

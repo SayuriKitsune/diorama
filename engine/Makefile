@@ -4,6 +4,7 @@ HFILES = video.h draw.h system.h
 OFILES = diorama.o video.o draw.o system.o
 
 # Optimizer flags
+CFLAGS = -Wall -Werror -Wno-maybe-uninitialized -g
 RFLAGS = 
 OFLAGS = -O3 -Ofast -mfpmath=sse -msse3 -m64
 
@@ -14,6 +15,6 @@ LIBS = -lSDL2
 # Compiling to test engine
 test: $(CFILES) $(HFILES)
 	-rm diorama
-	g++ -Wall -Werror -g $(RFLAGS) -c $(INCLUDES) $(CFILES)
+	g++ $(CFLAGS) $(RFLAGS) -c $(INCLUDES) $(CFILES)
 	g++ $(OFILES) $(LIBS) $(RFLAGS) -o diorama
 	./diorama
