@@ -352,11 +352,9 @@ namespace Draw
 	fint draw_a1,draw_b1,draw_c1; /* Barycentric coordinate (from) */
 	fint draw_a2,draw_b2,draw_c2; /* Barycentric coordinate (to) */
 	Fragment draw_f1,draw_f2,draw_f3; /* Fragment versions of each vertex color */
-	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,int from,int to,int y,int *data)
+	void slice(Vertex2D *a,Vertex2D *b,Vertex2D *c,Texture *tex,int from,int to,int y,int *data,int mode)
 	{
 		int x,color,sample;
-		fint af,bf,cf;
-		fint d1,d2,d3;
 		fint run;
 		fint u1,v1,u2,v2,u3,v3;
 		fint dred,dgreen,dblue,dextra;
@@ -364,88 +362,144 @@ namespace Draw
 		fint du,dv,uu,vv;
 		int u,v,s;
 		unsigned char *colorb;
-		/* Init */
-		red = 0;
-		green = 0;
-		blue = 0;
-		extra = 0;
 		/* Find the run length of the slice */
 		run = FINT_FROM_INT(to-from);
 		if(run <= 0)
 			return;
-		d1 = draw_a2-draw_a1;
-		d2 = draw_b2-draw_b1;
-		d3 = draw_c2-draw_c1;
-		d1 = FINT_DIV(d1,run);
-		d1 = FINT_DIV(d2,run);
-		d1 = FINT_DIV(d3,run);
-		af = draw_a1;
-		bf = draw_b1;
-		cf = draw_c1;
-		/* Color pointer */
-		colorb = (unsigned char*)&color;
-		/* Initial color */
-		red =    FINT_MUL(draw_f1.red,draw_a1)  +FINT_MUL(draw_f2.red,draw_b1)  +FINT_MUL(draw_f3.red,draw_c1);
-		green =  FINT_MUL(draw_f1.green,draw_a1)+FINT_MUL(draw_f2.green,draw_b1)+FINT_MUL(draw_f3.green,draw_c1);
-		blue =   FINT_MUL(draw_f1.blue,draw_a1) +FINT_MUL(draw_f2.blue,draw_b1) +FINT_MUL(draw_f3.blue,draw_c1);
-		extra =  FINT_MUL(draw_f1.extra,draw_a1)+FINT_MUL(draw_f2.extra,draw_b1)+FINT_MUL(draw_f3.extra,draw_c1);
-		/* Gourad coordinates */
-		dred =   FINT_MUL(draw_f1.red,draw_a2)  +FINT_MUL(draw_f2.red,draw_b2)  +FINT_MUL(draw_f3.red,draw_c2);
-		dgreen = FINT_MUL(draw_f1.green,draw_a2)+FINT_MUL(draw_f2.green,draw_b2)+FINT_MUL(draw_f3.green,draw_c2);
-		dblue =  FINT_MUL(draw_f1.blue,draw_a2) +FINT_MUL(draw_f2.blue,draw_b2) +FINT_MUL(draw_f3.blue,draw_c2);
-		dextra = FINT_MUL(draw_f1.extra,draw_a2)+FINT_MUL(draw_f2.extra,draw_b2)+FINT_MUL(draw_f3.extra,draw_c2);
-		dred =   FINT_SUB(dred,red);
-		dgreen = FINT_SUB(dgreen,green);
-		dblue =  FINT_SUB(dblue,blue);
-		dextra = FINT_SUB(dextra,extra);
-		dred =   FINT_DIV(dred,run);
-		dgreen = FINT_DIV(dgreen,run);
-		dblue =  FINT_DIV(dblue,run);
-		dextra = FINT_DIV(dextra,run);
-		/* Texture coordinates */
-		u1 = FINT_FROM_INT(a->u);
-		u2 = FINT_FROM_INT(b->u);
-		u3 = FINT_FROM_INT(c->u);
-		v1 = FINT_FROM_INT(a->v);
-		v2 = FINT_FROM_INT(b->v);
-		v3 = FINT_FROM_INT(c->v);
-		uu = FINT_MUL(u1,draw_a1)+FINT_MUL(u2,draw_b1)+FINT_MUL(u3,draw_c1);
-		vv = FINT_MUL(v1,draw_a1)+FINT_MUL(v2,draw_b1)+FINT_MUL(v3,draw_c1);
-		du = FINT_MUL(u1,draw_a2)+FINT_MUL(u2,draw_b2)+FINT_MUL(u3,draw_c2);
-		dv = FINT_MUL(v1,draw_a2)+FINT_MUL(v2,draw_b2)+FINT_MUL(v3,draw_c2);
-		du = FINT_SUB(du,uu);
-		dv = FINT_SUB(dv,vv);
-		du = FINT_DIV(du,run);
-		dv = FINT_DIV(dv,run);
-		/* Draw slice */
-		for(x = from;x < to;x++)
+		/* Calculate color gradient */
+		if(mode&DRAW_GOURAD)
 		{
-			/* Find interpolated color */
-			if(red > FINT_MASK)   colorb[0] = 0xFF; else colorb[0] = FINT_TO_COLOR(red);
-			if(green > FINT_MASK) colorb[1] = 0xFF; else colorb[1] = FINT_TO_COLOR(green);
-			if(blue > FINT_MASK)  colorb[2] = 0xFF; else colorb[2] = FINT_TO_COLOR(blue);
-			if(extra > FINT_MASK) colorb[3] = 0xFF; else colorb[3] = FINT_TO_COLOR(extra);
-			red += dred;
-			green += dgreen;
-			blue += dblue;
-			extra += dextra;
-			/* Find texture coordinate and sample */
-			u = FINT_TO_INT(uu);
-			v = FINT_TO_INT(vv);
-			sample = tex->get_pixel(u,v);
-			/* Alpha blend */
-			color = multiply_color(color,sample);
-			s = data[0];
-			data[0] = blend(x,y,color,s);
-			/* Advance */
-			uu += du;
-			vv += dv;
-			af += d1;
-			bf += d2;
-			cf += d3;
-			data++;
-			pixels_filled++;
+			/* Init colors */
+			red = 0;
+			green = 0;
+			blue = 0;
+			extra = 0;
+			/* Color pointer */
+			colorb = (unsigned char*)&color;
+			/* Initial color */
+			red =    FINT_MUL(draw_f1.red,draw_a1)  +FINT_MUL(draw_f2.red,draw_b1)  +FINT_MUL(draw_f3.red,draw_c1);
+			green =  FINT_MUL(draw_f1.green,draw_a1)+FINT_MUL(draw_f2.green,draw_b1)+FINT_MUL(draw_f3.green,draw_c1);
+			blue =   FINT_MUL(draw_f1.blue,draw_a1) +FINT_MUL(draw_f2.blue,draw_b1) +FINT_MUL(draw_f3.blue,draw_c1);
+			extra =  FINT_MUL(draw_f1.extra,draw_a1)+FINT_MUL(draw_f2.extra,draw_b1)+FINT_MUL(draw_f3.extra,draw_c1);
+			/* Gourad coordinates */
+			dred =   FINT_MUL(draw_f1.red,draw_a2)  +FINT_MUL(draw_f2.red,draw_b2)  +FINT_MUL(draw_f3.red,draw_c2);
+			dgreen = FINT_MUL(draw_f1.green,draw_a2)+FINT_MUL(draw_f2.green,draw_b2)+FINT_MUL(draw_f3.green,draw_c2);
+			dblue =  FINT_MUL(draw_f1.blue,draw_a2) +FINT_MUL(draw_f2.blue,draw_b2) +FINT_MUL(draw_f3.blue,draw_c2);
+			dextra = FINT_MUL(draw_f1.extra,draw_a2)+FINT_MUL(draw_f2.extra,draw_b2)+FINT_MUL(draw_f3.extra,draw_c2);
+			dred =   FINT_SUB(dred,red);
+			dgreen = FINT_SUB(dgreen,green);
+			dblue =  FINT_SUB(dblue,blue);
+			dextra = FINT_SUB(dextra,extra);
+			dred =   FINT_DIV(dred,run);
+			dgreen = FINT_DIV(dgreen,run);
+			dblue =  FINT_DIV(dblue,run);
+			dextra = FINT_DIV(dextra,run);
 		}
+		else
+		{
+			/* Assign only one color */
+			color = a->color;
+		}
+		/* Texture coordinates */
+		if(mode&DRAW_TEXTURE)
+		{
+			u1 = FINT_FROM_INT(a->u);
+			u2 = FINT_FROM_INT(b->u);
+			u3 = FINT_FROM_INT(c->u);
+			v1 = FINT_FROM_INT(a->v);
+			v2 = FINT_FROM_INT(b->v);
+			v3 = FINT_FROM_INT(c->v);
+			uu = FINT_MUL(u1,draw_a1)+FINT_MUL(u2,draw_b1)+FINT_MUL(u3,draw_c1);
+			vv = FINT_MUL(v1,draw_a1)+FINT_MUL(v2,draw_b1)+FINT_MUL(v3,draw_c1);
+			du = FINT_MUL(u1,draw_a2)+FINT_MUL(u2,draw_b2)+FINT_MUL(u3,draw_c2);
+			dv = FINT_MUL(v1,draw_a2)+FINT_MUL(v2,draw_b2)+FINT_MUL(v3,draw_c2);
+			du = FINT_SUB(du,uu);
+			dv = FINT_SUB(dv,vv);
+			du = FINT_DIV(du,run);
+			dv = FINT_DIV(dv,run);
+		}
+		/* Choose drawing method */
+		switch(mode)
+		{
+		case 7:
+			for(x = from;x < to;x++) /* TEXTURE GOURAD BLEND */
+			{
+				/* Find interpolated color */
+				if(red > FINT_MASK)   colorb[0] = 0xFF; else colorb[0] = FINT_TO_COLOR(red);
+				if(green > FINT_MASK) colorb[1] = 0xFF; else colorb[1] = FINT_TO_COLOR(green);
+				if(blue > FINT_MASK)  colorb[2] = 0xFF; else colorb[2] = FINT_TO_COLOR(blue);
+				if(extra > FINT_MASK) colorb[3] = 0xFF; else colorb[3] = FINT_TO_COLOR(extra);
+				red += dred;
+				green += dgreen;
+				blue += dblue;
+				extra += dextra;
+				/* Find texture coordinate and sample */
+				u = FINT_TO_INT(uu);
+				v = FINT_TO_INT(vv);
+				sample = tex->get_pixel(u,v);
+				/* Mix color */
+				color = multiply_color(color,sample);
+				s = data[0];
+				data[0] = blend(x,y,color,s);
+				/* Advance */
+				uu += du;
+				vv += dv;
+				data++;
+			}
+			break;
+		case 5:
+			for(x = from;x < to;x++) /* TEXTURE GOURAD */
+			{
+				/* Find interpolated color */
+				if(red > FINT_MASK)   colorb[0] = 0xFF; else colorb[0] = FINT_TO_COLOR(red);
+				if(green > FINT_MASK) colorb[1] = 0xFF; else colorb[1] = FINT_TO_COLOR(green);
+				if(blue > FINT_MASK)  colorb[2] = 0xFF; else colorb[2] = FINT_TO_COLOR(blue);
+				if(extra > FINT_MASK) colorb[3] = 0xFF; else colorb[3] = FINT_TO_COLOR(extra);
+				red += dred;
+				green += dgreen;
+				blue += dblue;
+				extra += dextra;
+				/* Find texture coordinate and sample */
+				u = FINT_TO_INT(uu);
+				v = FINT_TO_INT(vv);
+				sample = tex->get_pixel(u,v);
+				/* Set color */
+				if(sample&0xFF000000)
+					data[0] = multiply_color(color,sample);
+				/* Advance */
+				uu += du;
+				vv += dv;
+				data++;
+			}
+			break;
+		case 4:
+			for(x = from;x < to;x++) /* TEXTURE */
+			{
+				/* Find texture coordinate and sample */
+				u = FINT_TO_INT(uu);
+				v = FINT_TO_INT(vv);
+				sample = tex->get_pixel(u,v);
+				/* Set color */
+				if(sample&0xFF000000)
+					data[0] = multiply_color(color,sample);
+				/* Advance */
+				uu += du;
+				vv += dv;
+				data++;
+			}
+			break;
+		case 0:
+			for(x = from;x < to;x++) /* FLAT */
+			{
+				/* Set color */
+				data[0] = color;
+				/* Advance */
+				data++;
+			}
+			break;
+		}
+		/* Count pixels filled */
+		pixels_filled += (to-from);
 	}
 	/* Draws a single rise of a triangle */
 	float rise(Vertex2D *top,Vertex2D *bottom,Vertex2D *side,int yfrom,int yto,float dlong,float dside,float xslong,float xsside,Texture *t,int mode)
@@ -490,7 +544,7 @@ namespace Draw
 				barycentric_fast(side,xto,y,&draw_a2,&draw_b2,&draw_c2);
 				/* Draw slice */
 				data = Video::get_data(xfrom,y);
-				slice(top,bottom,side,t,xfrom,xto,y,data);
+				slice(top,bottom,side,t,xfrom,xto,y,data,mode);
 				/* Adjust */
 				xlong += dlong;
 				xside += dside;
