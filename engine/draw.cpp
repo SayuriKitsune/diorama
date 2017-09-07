@@ -231,21 +231,26 @@ namespace Draw
 		return 1;
 	}
 	/* Look up barycentric coordinates (faster) having already found the more constant intermediate values */
-	void barycentric_fast(Vertex2D *c,int x,int y,float *af,float *bf,float *cf)
+	void barycentric_fast(Vertex2D *c,int x,int y,fint *af,fint *bf,fint *cf)
 	{
 		int xmx3;
 		int ymy3;
 		int tx,ty;
+		float aa,bb,cc;
 		/* Find additional components */
 		xmx3 = (x-c->x);
 		ymy3 = (y-c->y);
 		/* Find tx and ty */
 		tx = (draw_y2my3*xmx3)+(draw_x3mx2*ymy3);
 		ty = (draw_y3my1*xmx3)+(draw_x1mx3*ymy3);
-		/* Output result */
-		af[0] = ((float)tx)/((float)draw_det);
-		bf[0] = ((float)ty)/((float)draw_det);
-		cf[0] = 1.0f-af[0]-bf[0];
+		/* Find result */
+		aa = ((float)tx)/((float)draw_det);
+		bb = ((float)ty)/((float)draw_det);
+		cc = 1.0f-aa-bb;
+		/* Convert */
+		af[0] = FINT_FROM_FLOAT(aa);
+		bf[0] = FINT_FROM_FLOAT(bb);
+		cf[0] = FINT_FROM_FLOAT(cc);
 	}
 	/* Convert from pixel to fragment */
 	void pixel_to_fragment(int c,Fragment *f)
@@ -448,8 +453,6 @@ namespace Draw
 		int xfrom; /* Actual left x coordinate of slice */
 		int xto; /* Actual right x coordinate of slice */
 		int *data; /* Pointer to pixel data */
-		float a1,b1,c1;
-		float a2,b2,c2;
 		/* Start x coordinates off */
 		xside = xsside;
 		xlong = xslong;
@@ -478,14 +481,8 @@ namespace Draw
 				if(xto >= Video::get_width())
 					xto = Video::get_width();
 				/* Find interpolants */
-				barycentric_fast(side,xfrom,y,&a1,&b1,&c1);
-				barycentric_fast(side,xto,y,&a2,&b2,&c2);
-				draw_a1 = FINT_FROM_FLOAT(a1);
-				draw_b1 = FINT_FROM_FLOAT(b1);
-				draw_c1 = FINT_FROM_FLOAT(c1);
-				draw_a2 = FINT_FROM_FLOAT(a2);
-				draw_b2 = FINT_FROM_FLOAT(b2);
-				draw_c2 = FINT_FROM_FLOAT(c2);
+				barycentric_fast(side,xfrom,y,&draw_a1,&draw_b1,&draw_c1);
+				barycentric_fast(side,xto,y,&draw_a2,&draw_b2,&draw_c2);
 				/* Draw slice */
 				data = Video::get_data(xfrom,y);
 				slice(top,bottom,side,f1,f2,f3,t,xfrom,xto,y,data);
@@ -536,6 +533,8 @@ namespace Draw
 		if(side == c) fside = &f3;
 		/* Call once to populate barycentric intermediates */
 		barycentric(top,bottom,side,0,0,&d1,&d2,&d3);
+		if(draw_det == 0)
+			return;
 		/* Find distances */
 		dy1 = side->y-top->y; /* From top to side */
 		dy2 = bottom->y-side->y; /* From side to bottom */
