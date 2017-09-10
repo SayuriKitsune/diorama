@@ -1,7 +1,7 @@
 # The input source code files and compiled objects for the engine
-CFILES = diorama.cpp video.cpp draw.cpp system.cpp vector.cpp
-HFILES = video.h draw.h system.h
-OFILES = diorama.o video.o draw.o system.o vector.o
+CFILES = diorama.cpp video.cpp draw.cpp system.cpp vector.cpp geo.cpp
+HFILES = video.h draw.h system.h vector.h geo.h
+OFILES = diorama.o video.o draw.o system.o vector.o geo.o
 
 # Optimizer flags
 CFLAGS = -Wall -Werror -Wno-maybe-uninitialized -g

@@ -221,3 +221,9 @@ float Vector :: get_w()
 {
 	return pos_w;
 }
+
+/* Sets by matrix */
+void Matrix :: set(Matrix *m)
+{
+	memcpy(data,m->data,sizeof(data));
+}

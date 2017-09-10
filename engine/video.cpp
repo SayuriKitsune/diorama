@@ -6,6 +6,7 @@
 #include <SDL.h>
 #include "video.h"
 #include "draw.h"
+#include "geo.h"
 
 /* Video */
 namespace Video
@@ -55,6 +56,8 @@ namespace Video
 		SDL_SetSurfaceBlendMode(surface,SDL_BLENDMODE_NONE); /* We don't want SDL to blend the surface used as framebuffer */
 		/* Calculate blend LUT */
 		Draw::calculate_multiply();
+		/* Initialize geo render */
+		Geo::init();
 		/* Ready */
 		active = 1;
 		return 0;
@@ -65,6 +68,8 @@ namespace Video
 		/* Already stopped? */
 		if(!active)
 			return;
+		/* End geo render */
+		Geo::exit();
 		/* Remove surface */
 		SDL_FreeSurface(surface);
 		/* Remove window */

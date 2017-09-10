@@ -98,6 +98,10 @@ public:
 		sx,sy,sz - factor to scale to in each dimension
 	*/
 	void scale(float sx,float sy,float sz);
+	/*
+		Sets this matrix equal to given
+	*/
+	void set(Matrix *m);
 };
 
 #endif
