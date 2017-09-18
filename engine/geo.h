@@ -3,11 +3,7 @@
 
 /* Defines */
 #define GEO_MATRIX_STACK 16
-#define GEO_MAX_POINTS 4
-
-/* Types */
-#define GEO_TRIANGLE 0
-#define GEO_QUAD 1
+#define GEO_MAX_POINTS 256
 
 /* Includes */
 #include "vector.h"
@@ -54,18 +50,6 @@ namespace Geo
 	*/
 	extern void transform(Vector *v);
 	/*
-		Begins a new shape
-	*/
-	extern void begin(int t);
-	/*
-		Adds a point
-	*/
-	extern void point(float x,float y,float z);
-	/*
-		End shape and render
-	*/
-	extern void end();
-	/*
 		Sets current texture
 	*/
 	extern void texture(Texture *t);
@@ -73,6 +57,17 @@ namespace Geo
 		Sets current mode
 	*/
 	extern void mode(int m);
+	/*
+		Draws an array of triangles
+		Will not render anything with more than GEO_MAX_POINTS points in it
+		pc - count of points
+		ps - the points
+		txs - the texture coordinates
+		cs - the colors
+		tc - count of triangles
+		ts - the triangles
+	*/
+	extern void draw(int pc,float *ps,int *txs,int *cs,int tc,int *ts);
 }
 
 #endif

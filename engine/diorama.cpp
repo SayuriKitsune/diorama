@@ -14,6 +14,13 @@
 #include "geo.h"
 
 /* Entry */
+float points[] = {-1.0f,-1.0f,0.0f,
+                  1.0f,-1.0f,0.0f,
+                  1.0f,1.0f,0.0f,
+                  -1.0f,1.0f,0.0f};
+int coords[] = {0,0,32,0,32,32,0,32};
+int colors[] = {DRAW_CYAN,DRAW_MAGENTA,DRAW_YELLOW,DRAW_TRANSLUCENT};
+int triangles[] = {0,1,2,0,2,3};
 int main(int argn,char **argv)
 {
 	/* Start video */
@@ -30,12 +37,7 @@ int main(int argn,char **argv)
 		Geo::identity();
 		Geo::scale(0.5f,0.5f,0.5f);
 		Geo::texture(t);
-		Geo::begin(GEO_QUAD);
-		Geo::point(-1.0f,-1.0f,0.0f);
-		Geo::point(1.0f,-1.0f,0.0f);
-		Geo::point(1.0f,1.0f,0.0f);
-		Geo::point(-1.0f,1.0f,0.0f);
-		Geo::end();
+		Geo::draw(4,points,coords,colors,2,triangles);
 		if(Video::end())
 			return -1;
 	}

@@ -4,7 +4,7 @@ HFILES = video.h draw.h system.h vector.h geo.h
 OFILES = diorama.o video.o draw.o system.o vector.o geo.o
 
 # Optimizer flags
-CFLAGS = -Wall -Werror -Wno-maybe-uninitialized -g
+CFLAGS = -Wall -Werror -Wno-maybe-uninitialized -Wno-narrowing -g
 RFLAGS = 
 OFLAGS = -O3 -Ofast -mfpmath=sse -msse3 -m64
 

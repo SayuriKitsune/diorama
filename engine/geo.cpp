@@ -17,8 +17,6 @@ namespace Geo
 	float geo_screen_scale_x = 0.0f;
 	int geo_active = 0; /* Geo render ready? */
 	Vector *geo_points[GEO_MAX_POINTS]; /* Points to define object to be drawn */
-	int geo_point = 0; /* Current point */
-	int geo_type = 0; /* Current thing to render */
 	Vertex2D geo_vertex[GEO_MAX_POINTS]; /* Vertex matching points */
 	Texture *geo_texture; /* Current texture */
 	int geo_mode; /* Current render mode */
@@ -41,7 +39,6 @@ namespace Geo
 		/* Points */
 		for(i = 0;i < GEO_MAX_POINTS;i++)
 			geo_points[i] = new Vector(0.0f,0.0f,0.0f,0.0f);
-		geo_point = 0;
 		/* Texture */
 		geo_texture = 0;
 		/* Mode */
@@ -125,49 +122,51 @@ namespace Geo
 		px[0] = (int)x;
 		py[0] = (int)y;
 	}
+	/* Draw arrays */
+	void draw(int pc,float *ps,int *txs,int *cs,int tc,int *ts)
+	{
+		int i,ix,ixx;
+		Vertex2D *va,*vb,*vc;
+		/* Exceeded maximum points */
+		if(pc >= GEO_MAX_POINTS)
+			return;
+		/* Transform points */
+		ix = 0;
+		ixx = 0;
+		for(i = 0;i < pc;i++)
+		{
+			/* Copy */
+			geo_points[i]->set(ps[ix],ps[ix+1],ps[ix+2],1.0f);
+			/* Transform */
+			transform(geo_points[i]);
+			/* To screen */
+			screen(geo_points[i],&geo_vertex[i].x,&geo_vertex[i].y);
+			/* Place results */
+			geo_vertex[i].u = txs[ixx];
+			geo_vertex[i].v = txs[ixx+1];
+			geo_vertex[i].color = cs[i];
+			/* Next */
+			ix += 3;
+			ixx += 2;
+		}
+		/* Render triangles */
+		ix = 0;
+		for(i = 0;i < tc;i++)
+		{
+			/* Assign vertices */
+			va = &geo_vertex[ts[ix]];
+			vb = &geo_vertex[ts[ix+1]];
+			vc = &geo_vertex[ts[ix+2]];
+			/* Draw */
+			Draw::triangle(va,vb,vc,geo_texture,geo_mode);
+			/* Next */
+			ix += 3;
+		}
+	}
 	/* Transforms vector */
 	void transform(Vector *v)
 	{
 		v->multiply(geo_transform[geo_stack]);
-	}
-	/* Begins new shape */
-	void begin(int t)
-	{
-		geo_point = 0;
-		geo_type = t;
-	}
-	/* Adds point */
-	void point(float x,float y,float z)
-	{
-		if(geo_point >= GEO_MAX_POINTS)
-			return;
-		geo_points[geo_point]->set(x,y,z,1.0f);
-		geo_point++;
-	}
-	/* Finish and render shape */
-	void end()
-	{
-		int i;
-		/* First we transform points */
-		for(i = 0;i < geo_point;i++)
-		{
-			transform(geo_points[i]);
-			screen(geo_points[i],&geo_vertex[i].x,&geo_vertex[i].y);
-			geo_vertex[i].u = 0;
-			geo_vertex[i].v = 0;
-			geo_vertex[i].color = DRAW_WHITE;
-		}
-		/* Then we render */
-		switch(geo_type)
-		{
-		case GEO_TRIANGLE:
-			Draw::triangle(&geo_vertex[0],&geo_vertex[1],&geo_vertex[2],geo_texture,geo_mode);
-			break;
-		case GEO_QUAD:
-			Draw::triangle(&geo_vertex[0],&geo_vertex[1],&geo_vertex[2],geo_texture,geo_mode);
-			Draw::triangle(&geo_vertex[0],&geo_vertex[2],&geo_vertex[3],geo_texture,geo_mode);
-			break;
-		}
 	}
 	/* Specify texture */
 	void texture(Texture *t)
